@@ -33,10 +33,10 @@ func CreateNewPost(title string) (path string) {
 	if !IsGorDir(".") {
 		Log(ERROR, "Not Gor Dir, need config.yml")
 	}
-	path = "posts/" + strings.Replace(title, " ", "-", -1) + ".md"
+	path = filepath.Join("posts/", strings.Replace(title, " ", "-", -1)+".md")
 	_, err := os.Stat(path)
 	if err == nil || !os.IsNotExist(err) {
-		Log(ERROR, "Post File Exist?!", path)
+		Log(ERROR, "Post file(%s) exist?", path)
 	}
 	err = ioutil.WriteFile(path, []byte(fmt.Sprintf(TPL_NEW_POST, title, time.Now().Format("2006-01-02"))), os.ModePerm)
 	if err != nil {
@@ -46,13 +46,13 @@ func CreateNewPost(title string) (path string) {
 	return
 }
 
-func CreateNewPostWithImgs(title, imgsrc string) {
+func CreateNewPostWithImgs(title, imgsrc string) (path string) {
 
 	cfg := loadConfig(".")
 	for k, v := range cfg {
 		Log(INFO, "%s = %s", k, v)
 	}
-	path := CreateNewPost(title)
+	path = CreateNewPost(title)
 
 	start := strings.LastIndex(path, "/") + 1
 	end := strings.LastIndex(path, ".")
@@ -76,6 +76,7 @@ func CreateNewPostWithImgs(title, imgsrc string) {
 			panic(err)
 		}
 	}
+	return
 }
 
 func cpPostImgs(post string, imgsrc string, cfg Mapper) (imgtag []string) {
@@ -89,23 +90,24 @@ func cpPostImgs(post string, imgsrc string, cfg Mapper) (imgtag []string) {
 		imgsrc += "/"
 	}
 
-	imgdst := cfg.GetString("localdir") + post
+	imgdst := filepath.Join(cfg.GetString("localdir"), post)
 	_, err = os.Stat(imgdst)
 	if os.IsNotExist(err) {
-		os.MkdirAll(imgdst, 0777)
+		os.MkdirAll(imgdst, 0700)
 	}
 
 	imgtag = make([]string, len(files))
 	i := 0
 	for idx, f := range files {
-		err := cp(imgdst+"/"+f.Name(), imgsrc+f.Name())
+		err := cp(filepath.Join(imgdst, f.Name()), filepath.Join(imgsrc, f.Name()))
 		if err != nil {
-			Log(ERROR, "%s resouce file cp %s error", idx, f.Name())
+			Log(ERROR, "%5d resouce file copy %s error", idx, f.Name())
 			continue
 		}
-		imgtag[i] = post + "/" + f.Name()
+		imgtag[i] = filepath.Join(post, f.Name())
 		i++
 	}
+
 	imgtag = imgtag[:i]
 	return
 }
@@ -172,6 +174,5 @@ func loadConfig(root string) (imgs_cfg Mapper) {
 	if imgs_cfg["localdir"] == nil {
 		imgs_cfg["localdir"] = IMG_LOCALDIR
 	}
-
 	return
 }

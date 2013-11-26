@@ -5,6 +5,7 @@ package gor
 import (
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -41,11 +42,14 @@ func Log(level int, format string, v ...interface{}) {
 
 		if ok {
 			file = filepath.Base(file)
-			fmt.Printf("%6s %s %s(%d): %s\n", prefix, time.Now().Format("15:04:05"), file, line, fmt.Sprintf(format, v...))
+			fmt.Printf("[%6s] %s %s(%d): %s\n", prefix, time.Now().Format("15:04:05"), file, line, fmt.Sprintf(format, v...))
 		} else {
-			fmt.Printf("%6s %s >> %s\n", prefix, time.Now().String(), fmt.Sprintf(format, v...))
+			fmt.Printf("[%6s] %s >> %s\n", prefix, time.Now().String(), fmt.Sprintf(format, v...))
 		}
 	} else if level != DEBUG {
-		fmt.Printf("%6s %s\n", prefix, fmt.Sprintf(format, v...))
+		fmt.Printf("[%6s] %s\n", prefix, fmt.Sprintf(format, v...))
+	}
+	if level == ERROR {
+		os.Exit(-1)
 	}
 }
