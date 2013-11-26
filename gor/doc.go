@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 )
 
 const (
@@ -11,35 +12,22 @@ Run specified gor tool
 
 Usage:
 
-	gor command [args...]
+    gor command [args...]
 
-Init Blog layout
+        -debug      Enable debug mode
 
-    gor init <dir>
-
-Compile
-
-	gor compile
-
-Preview Compiled Website
-
-	gor http
-
-Print Configure
-
-	gor config
-
-Print Payload
-
-	gor payload
-
-run pprof (for dev)
-
-	gor pprof
-
-	`
+    gor new <diretory>                  Init Blog layout
+    gor compile                         Compile
+    gor http                            Preview Compiled Website
+    gor config                          Print Configure
+    gor payload                         Print Payload
+    gor pprof                           Run pprof (for dev)
+    gor post <title> {image diretory}   Post new page
+    gor posts                           Show all pages
+`
 )
 
 func PrintUsage() {
 	fmt.Println(HELP)
+	os.Exit(1)
 }
