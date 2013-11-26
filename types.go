@@ -3,7 +3,6 @@ package gor
 import (
 	"fmt"
 	"github.com/wendal/mustache"
-	"log"
 	"time"
 )
 
@@ -104,7 +103,7 @@ func (m Mapper) GetStrings(key string) (strs []string) {
 	case []string:
 		strs = v.([]string)
 	default:
-		log.Println(">>", v)
+		Log(DEBUG, ">>%s", v)
 	}
 	return
 }

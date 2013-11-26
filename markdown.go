@@ -1,11 +1,7 @@
 package gor
 
 import (
-	//"bytes"
-	// "github.com/knieriem/markdown"
-	//. "github.com/russross/blackfriday"
 	. "github.com/wendal/blackfriday"
-	"log"
 	"regexp"
 	"strings"
 )
@@ -28,7 +24,7 @@ func MarkdownToHtml(content string) (str string) {
 		e := recover()
 		if e != nil {
 			str = content
-			log.Println("Render Markdown ERR:", e)
+			Log(ERROR, "Render Markdown %s", e)
 		}
 	}()
 	//注释掉的部分,是另外一个markdown渲染库,更传统一些

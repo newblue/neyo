@@ -10,22 +10,42 @@ import (
 	"time"
 )
 
-var (
-	debug = flag.Bool("debug", true, "Enable Debug, verbose output")
+const (
+	ERROR = 0
+	WARN  = iota + 1
+	INFO
+	DEBUG
 )
 
-func D(v ...interface{}) {
-	if !*debug {
-		return
-	}
-	_, file, line, ok := runtime.Caller(1)
+var (
+	debug = flag.Bool("debug", false, "Enable Debug, verbose output")
+)
 
-	if ok {
-		if file != "" {
+func Log(level int, format string, v ...interface{}) {
+	var prefix string
+	switch level {
+	case ERROR:
+		prefix = "ERROR"
+	case INFO:
+		prefix = "INFO"
+	case WARN:
+		prefix = "WARN"
+	case DEBUG:
+		prefix = "DEBUG"
+	default:
+		prefix = "UNKOWN"
+	}
+
+	if *debug == true && level == DEBUG {
+		_, file, line, ok := runtime.Caller(1)
+
+		if ok {
 			file = filepath.Base(file)
+			fmt.Printf("%6s %s %s(%d): %s\n", prefix, time.Now().Format("15:04:05"), file, line, fmt.Sprintf(format, v...))
+		} else {
+			fmt.Printf("%6s %s >> %s\n", prefix, time.Now().String(), fmt.Sprintf(format, v...))
 		}
-		fmt.Printf("%s %s:%d: %s", time.Now().Format("15:04:05"), file, line, fmt.Sprintln(v...))
-	} else {
-		fmt.Printf("%s >> %s", time.Now().String(), fmt.Sprint(v...))
+	} else if level != DEBUG {
+		fmt.Printf("%6s %s\n", prefix, fmt.Sprintf(format, v...))
 	}
 }

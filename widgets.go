@@ -5,7 +5,6 @@ import (
 	"github.com/wendal/errors"
 	"github.com/wendal/mustache"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -67,11 +66,11 @@ const (
 					ds.type = 'text/javascript';ds.async = true;
 					ds.src = 'http://static.duoshuo.com/embed.js';
 					ds.charset = 'UTF-8';
-					(document.getElementsByTagName('head')[0] 
+					(document.getElementsByTagName('head')[0]
 					|| document.getElementsByTagName('body')[0]).appendChild(ds);
 	})();
 	</script>
-	<!-- Duoshuo Comment END -->	
+	<!-- Duoshuo Comment END -->
 	`
 	tpl_cnzz = `<script src="http://s25.cnzz.com/stat.php?id=%d&web_id=%d" language="JavaScript"></script>`
 
@@ -119,14 +118,14 @@ func LoadWidgets(topCtx mustache.Context) ([]Widget, string, error) {
 		if cnf["layout"] != nil {
 			widget_enable, ok := cnf["layout"].(bool)
 			if ok && !widget_enable {
-				log.Println("Disable >", cnf_path)
+				Log(INFO, "Disable >", cnf_path)
 			}
 		}
 		builderFunc := WidgetBuilders[info.Name()]
 		if builderFunc == nil { // 看看是否符合自定义挂件的格式
 			_widget, _assets, _err := BuildCustomWidget(info.Name(), path, cnf)
 			if _err != nil {
-				log.Println("NO WidgetBuilder >>", cnf_path, _err)
+				Log(ERROR, "NO WidgetBuilder >> %s %s", cnf_path, _err)
 			}
 			if _widget != nil {
 				widgets = append(widgets, _widget)
@@ -143,7 +142,7 @@ func LoadWidgets(topCtx mustache.Context) ([]Widget, string, error) {
 			return err
 		}
 		widgets = append(widgets, widget)
-		log.Println("Load widget from ", cnf_path)
+		Log(INFO, "Load widget from %s", cnf_path)
 		return nil
 	})
 	return widgets, assets, err
@@ -191,14 +190,14 @@ type CommentsWidget Mapper
 
 func (self CommentsWidget) Prepare(mapper Mapper, topCtx mustache.Context) Mapper {
 	if mapper["comments"] != nil && !mapper["comments"].(bool) {
-		log.Println("Disable comments")
+		Log(INFO, "Disable comments")
 		return nil
 	}
 	return Mapper(self)
 }
 
 func BuildCommentsWidget(cnf Mapper, topCtx mustache.Context) (Widget, error) {
-	log.Println("Comments >>", cnf.Layout())
+	Log(INFO, "Comments >> %s", cnf.Layout())
 	switch cnf.Layout() {
 	case "disqus":
 		disqus := cnf[cnf.Layout()].(map[string]interface{})
@@ -209,7 +208,7 @@ func BuildCommentsWidget(cnf Mapper, topCtx mustache.Context) (Widget, error) {
 		self := make(CommentsWidget)
 		self["comments"] = fmt.Sprintf(Comments_disqus, short_name)
 		return self, nil
-	case "uyan" :
+	case "uyan":
 		uyan := cnf[cnf.Layout()].(map[string]interface{})
 		uid := uyan["uid"]
 		self := make(CommentsWidget)
@@ -278,11 +277,11 @@ func (c *CustomWidget) Prepare(mapper Mapper, ctx mustache.Context) Mapper {
 func BuildCustomWidget(name string, dir string, cnf Mapper) (Widget, []string, error) {
 	layoutName, ok := cnf["layout"]
 	if !ok || layoutName == "" {
-		log.Println("Skip Widget : " + dir)
+		Log(INFO, "Skip Widget: %s ", dir)
 		return nil, nil, nil
 	}
 
-	layoutFilePath := dir + "/layouts/" + layoutName.(string) + ".html"
+	layoutFilePath := filepath.Join(dir, "/layouts/", layoutName.(string)+".html")
 	f, err := os.Open(layoutFilePath)
 	if err != nil {
 		return nil, nil, errors.New("Fail to load Widget Layout" + dir + "\n" + err.Error())

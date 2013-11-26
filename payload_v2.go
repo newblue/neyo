@@ -24,7 +24,7 @@ func MakePayLoad(root string) (webSite *WebSite, err error) {
 	}
 	root += "/"
 	webSite.Root = root
-	D("root dir >", root)
+	Log(DEBUG, "root dir: ", root)
 
 	webSite.LoadMainConfig()
 	webSite.CheckMainConfig()
@@ -46,14 +46,14 @@ func (webSite *WebSite) LoadMainConfig() {
 		panic(err)
 	}
 	ToStruct(cnf, reflect.ValueOf(&webSite.TopCnf))
-	D("config.yml", webSite.TopCnf)
+	Log(DEBUG, "config.yml\n%s\n", webSite.TopCnf)
 
 	siteCnf, err := ReadYml(webSite.Root + SITE_YAML)
 	if err != nil {
 		panic(err)
 	}
 	ToStruct(siteCnf, reflect.ValueOf(&webSite.SiteCnf))
-	D("site.yml", webSite.SiteCnf)
+	Log(DEBUG, "site.yml\n%s\n", webSite.SiteCnf)
 }
 
 func (webSite *WebSite) CheckMainConfig() {

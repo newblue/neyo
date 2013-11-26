@@ -2,7 +2,6 @@ package gor
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
@@ -15,7 +14,7 @@ func ToStruct(m map[string]interface{}, val reflect.Value) {
 		return
 	}
 	if val.Kind() == reflect.Ptr && val.Elem().Kind() != reflect.Struct {
-		log.Println("ERR, 仅支持*struct")
+		Log(ERROR, "Only supported struct")
 		return
 	}
 
@@ -30,13 +29,13 @@ func ToStruct(m map[string]interface{}, val reflect.Value) {
 			continue
 		}
 		if !field.CanSet() {
-			log.Println("CanSet = false", k, v)
+			Log(WARN, "CanSet = false, %s %s", k, v)
 			continue
 		}
-		//D("Found key=", k, "value=", v, field.Type().String())
+		Log(DEBUG, "Found key=%s value=%s %s", k, v, field.Type().String())
 		switch field.Kind() {
 		case reflect.String:
-			//log.Println("Ready to SetString", v)
+			Log(DEBUG, "Ready to SetString %s", v)
 			if _str, ok := v.(string); ok {
 				field.SetString(_str)
 			} else {
@@ -56,7 +55,7 @@ func ToStruct(m map[string]interface{}, val reflect.Value) {
 				}
 				field.Set(reflect.ValueOf(strs))
 			} else {
-				log.Println("Only []string is supported yet")
+				Log(WARN, "Only []string is supported yet")
 			}
 		case reflect.Map:
 			field.Set(reflect.ValueOf(v))
@@ -71,7 +70,7 @@ func ToStruct(m map[string]interface{}, val reflect.Value) {
 			}
 			v2, ok := v.(map[string]interface{})
 			if !ok {
-				log.Println("Not a map[string]interface{}", "key=", k, "value=", v)
+				Log(INFO, "Not a map[string]interface{} key=%s value=%s", k, v)
 				return
 			}
 			ToStruct(v2, field)

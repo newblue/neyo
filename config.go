@@ -6,8 +6,8 @@ import (
 	"github.com/wendal/goyaml2"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
+	"path/filepath"
 )
 
 // 读取配置文件()
@@ -18,11 +18,13 @@ func ReadConfig(root string) (cnf map[string]interface{}, err error) {
 
 // 读取YAML格式的配置文件(兼容JSON)
 func ReadYmlCnf(root string) (map[string]interface{}, error) {
-	return ReadYml(root + "/" + CONFIG_YAML)
+	path := filepath.Join(root, CONFIG_YAML)
+	return ReadYml(path)
 }
 
 // 从文件读取YAML
 func ReadYml(path string) (cnf map[string]interface{}, err error) {
+	Log(INFO, "Read yaml config file %s", path)
 	err = nil
 	f, err := os.Open(path)
 	if err != nil {
@@ -43,27 +45,27 @@ func ReadYmlReader(r io.Reader) (cnf map[string]interface{}, err error) {
 	}
 
 	if string(buf[0:1]) == "{" {
-		log.Println("Look lile a Json, try it")
+		Log(INFO, "\tLook lile a json, try it")
 		err = json.Unmarshal(buf, &cnf)
 		if err == nil {
-			log.Println("It is Json Map")
+			Log(WARN, "\tIt is json map")
 			return
 		}
 	}
 
 	_map, _err := goyaml2.Read(bytes.NewBuffer(buf))
 	if _err != nil {
-		log.Println("Goyaml2 ERR>", string(buf), _err)
+		Log(ERROR, "goyaml2 ", string(buf), _err)
 		//err = goyaml.Unmarshal(buf, &cnf)
 		err = _err
 		return
 	}
 	if _map == nil {
-		log.Println("Goyaml2 output nil? Pls report bug\n" + string(buf))
+		Log(INFO, "goyaml2 output nil? Pls report bug\n%s", string(buf))
 	}
 	cnf, ok := _map.(map[string]interface{})
 	if !ok {
-		log.Println("Not a Map? >> ", string(buf), _map)
+		Log(INFO, "Not a Map? >> %s %s", string(buf), _map)
 		cnf = nil
 	}
 	return

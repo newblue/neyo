@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/wendal/mustache"
-	"log"
 	"os"
 	"time"
 )
@@ -62,13 +61,13 @@ func (*RssPlugin) Exec(topCtx mustache.Context) {
 	rss := &Rss{"2.0", &RssChannel{title, production_url, pubDate, items}}
 	f, err := os.OpenFile("compiled/rss.xml", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
 	if err != nil {
-		log.Println("ERR When Create RSS", err)
+		Log(ERROR, "When Create RSS %s", err)
 		return
 	}
 	defer f.Close()
 	data, err := xml.MarshalIndent(rss, "", "  ")
 	if err != nil {
-		log.Println("ERR When Create RSS", err)
+		Log(ERROR, "When Create RSS %s", err)
 		return
 	}
 	// FUCK!! 官方的xml库极其弱智,无法为struct指定名字
@@ -88,7 +87,7 @@ type SitemapPlugin struct{}
 func (SitemapPlugin) Exec(topCtx mustache.Context) {
 	f, err := os.OpenFile("compiled/sitemap.xml", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
 	if err != nil {
-		log.Println("Error when create sitemap", err)
+		Log(ERROR, "When create sitemap %s", err)
 		return
 	}
 	defer f.Close()

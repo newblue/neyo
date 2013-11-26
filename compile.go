@@ -8,11 +8,10 @@ import (
 	"github.com/wendal/mustache"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"sort"
+	"strings"
 )
 
 // 编译整个网站
@@ -26,7 +25,7 @@ func Compile() error {
 
 	payload, err := BuildPlayload("./") // payload,核心上下文的主要部分,不可变
 	if err != nil {
-		log.Println("Build PayLoad FAIL!!")
+		Log(INFO, "Build PayLoad FAIL!!")
 		return err
 	}
 
@@ -42,14 +41,14 @@ func Compile() error {
 	copyDir("themes/"+themeName+"/partials", ".tmp_partials")
 
 	db_posts_dict, _ := payload_ctx.Get("db.posts.dictionary")
-	//log.Println(">>>>>>>>>>>>", len(db_posts_dict.Val.Interface().(map[string]Mapper)))
+	Log(DEBUG, "%s", len(db_posts_dict.Val.Interface().(map[string]Mapper)))
 	for id, post := range db_posts_dict.Val.Interface().(map[string]Mapper) {
 		_tmp, err := PrapreMainContent(id, post["_content"].(*DocContent).Source, payload_ctx)
 		if err != nil {
 			return err
 		}
 		post["_content"].(*DocContent).Main = _tmp
-		//log.Fatal(_tmp)
+		Log(DEBUG, _tmp)
 	}
 
 	//mdParser = markdown.NewParser(&markdown.Extensions{Smart: true})
@@ -64,7 +63,7 @@ func Compile() error {
 		return err
 	}
 
-	//log.Println(">>>", payload_ctx.Dir(), "?>", topCtx.Dir())
+	Log(DEBUG, payload_ctx.Dir(), "?>", topCtx.Dir())
 
 	BaiscHelpers(payload, helpers, topCtx)
 	CtxHelpers(payload, ctxHelpers, topCtx)
@@ -86,7 +85,7 @@ func Compile() error {
 		dynamicMapper["assets"] = PrapareAssets(themeName, page.Layout(), topCtx) + widget_assets
 		widgetCtx := PrapareWidgets(widgets, page, topCtx)
 		ctx = mustache.MakeContexts(page, dynamicMapper, topCtx, widgetCtx)
-		//log.Println(">>", ctx.Dir(), topCtx.Dir())
+		Log(DEBUG, ctx.Dir(), topCtx.Dir())
 		_tmp, err := PrapreMainContent(id, docCont.Source, ctx)
 		if err != nil {
 			return err
@@ -123,10 +122,10 @@ func Compile() error {
 		var pgCnf Mapper
 		pgCnf = paginatorCnf.(map[string]interface{})
 		if _, ok := layouts[pgCnf.String("layout")]; ok {
-			log.Println("Enable paginator")
+			Log(INFO, "Enable paginator")
 			renderPaginator(pgCnf, layouts, topCtx, widgets)
 		} else {
-			log.Println("Layout Not Found", pgCnf.String("layout"))
+			Log(INFO, "Layout Not Found", pgCnf.String("layout"))
 		}
 	}
 
@@ -136,19 +135,19 @@ func Compile() error {
 		}
 	}
 
-	log.Println("Done")
+	Log(INFO, "Done")
 	return nil
 }
 
 func RenderInLayout(content string, layoutName string, layouts map[string]Mapper, ctx mustache.Context) (string, error) {
-	//log.Println("Render Layout", layoutName, ">>", content, "<<END")
+	Log(DEBUG, "Render Layout", layoutName, ">>", content, "<<END")
 	ctx2 := make(map[string]string)
 	ctx2["content"] = content
 	layout := layouts[layoutName]
 	if layout == nil {
 		return "", errors.New("Not such Layout : " + layoutName)
 	}
-	//log.Println(layoutName, layout["_content"])
+	Log(DEBUG, layoutName, layout["_content"])
 	buf := &bytes.Buffer{}
 	err := layout["_content"].(*DocContent).TPL.Render(mustache.MakeContexts(ctx2, ctx), buf)
 	if err != nil {
@@ -182,7 +181,7 @@ func BaiscHelpers(payload Mapper, helpers map[string]mustache.SectionRenderFunc,
 		for _, post := range latest_posts {
 			top := map[string]interface{}{}
 			top["summary"] = MakeSummary(post, summary_lines, topCtx)
-			//log.Println(top["summary"])
+			Log(DEBUG, "%s", top["summary"])
 			top["content"] = post["_content"].(*DocContent).Main
 			for _, node := range nodes {
 				err = node.Render(mustache.MakeContexts(post, top, ctx), w)
@@ -296,12 +295,12 @@ func CtxHelpers(payload Mapper, ctxHelper map[string]func(interface{}) interface
 
 		//current_page
 		current_page_id := FromCtx(topCtx, "current_page_id")
-		//log.Println("current_page_id", current_page_id)
+		Log(DEBUG, "current_page_id", current_page_id)
 
-		//log.Println(in)
+		Log(DEBUG, "%s", in)
 		ids, ok := in.([]interface{})
 		if !ok {
-			log.Println("Not String Array?")
+			Log(INFO, "Not String Array?")
 			return false
 		}
 
@@ -310,7 +309,7 @@ func CtxHelpers(payload Mapper, ctxHelper map[string]func(interface{}) interface
 			p := pages[id.(string)]
 			if current_page_id != nil {
 				p["is_active_page"] = id == current_page_id.(string)
-				//log.Println("is_active_page", id == current_page_id.(string))
+				Log(DEBUG, "is_active_page", id == current_page_id.(string))
 			}
 			_pages = append(_pages, p)
 		}
@@ -352,18 +351,18 @@ func CtxHelpers(payload Mapper, ctxHelper map[string]func(interface{}) interface
 			post = dict[id]
 		}
 		index := post_id_map[post.Id()]
-		//log.Println(index, post.Id())
+		Log(DEBUG, "%s %s", index, post.Id())
 		if index == 0 {
 			return false
 		}
-		//log.Println("Post has previous", index, post.Id())
+		Log(DEBUG, "Post has previous", index, post.Id())
 		return dict[chronological[index-1]]
 	}
 
 	ctxHelper["to_categories"] = func(in interface{}) interface{} {
 		ids, ok := in.([]string)
 		if !ok {
-			log.Println("BAD to_categories")
+			Log(INFO, "BAD to_categories")
 			return false
 		}
 		_catalogs := make([]*Catalog, 0)
@@ -392,11 +391,11 @@ func PrapreMainContent(id string, content string, ctx mustache.Context) (string,
 	//mdParser := markdown.NewParser(&markdown.Extensions{Smart: true})
 	str, err := mustache.RenderString(content, ctx)
 	if err != nil {
-		log.Println("Error When Parse >> " + id)
+		Log(INFO, "Error When Parse >> "+id)
 		return str, err
 	}
 	if strings.HasSuffix(id, ".md") || strings.HasSuffix(id, ".markdown") {
-		//log.Println("R: MD : " + id)
+		Log(INFO, "Read markdown: %s", id)
 		str = MarkdownToHtml(str)
 	}
 	return str, nil
@@ -504,10 +503,10 @@ func CopyResources(themeName string) {
 }
 
 func copyDir(src string, target string) error {
-	//log.Println("From", src, "To", target)
+	Log(DEBUG, "Copy directory from %s to %s", src, target)
 	fst, err := os.Stat(src)
 	if err != nil {
-		//log.Println(err)
+		Log(ERROR, "Copy directory %s", err)
 		return err
 	}
 	if !fst.IsDir() {
@@ -515,7 +514,7 @@ func copyDir(src string, target string) error {
 	}
 	finfos, err := ioutil.ReadDir(src)
 	if err != nil {
-		log.Println(err)
+		Log(ERROR, "%s", err)
 		return err
 	}
 	for _, finfo := range finfos {
@@ -525,7 +524,7 @@ func copyDir(src string, target string) error {
 		if finfo.Name() == "config.yml" {
 			continue
 		}
-		//log.Println(finfo.Name())
+		Log(DEBUG, finfo.Name())
 		dst := target + "/" + finfo.Name()
 		if finfo.IsDir() {
 			copyDir(src+"/"+finfo.Name(), dst)
@@ -535,13 +534,13 @@ func copyDir(src string, target string) error {
 		os.MkdirAll(filepath.Dir(dst), os.ModePerm)
 		f, err := os.Open(src + "/" + finfo.Name())
 		if err != nil {
-			log.Println(err)
+			Log(ERROR, "Open file error %s", err)
 			continue
 		}
 		defer f.Close()
 		f2, err := os.OpenFile(dst, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
 		if err != nil {
-			log.Println(err)
+			Log(ERROR, "%s", err)
 			continue
 		}
 		defer f2.Close()
@@ -581,10 +580,10 @@ func MakeSummary(post Mapper, lines int, topCtx mustache.Context) string {
 	}
 	str, err := mustache.RenderString(dst, topCtx)
 	if err != nil {
-		log.Println("BAD Mustache after Summary cut!")
+		Log(ERROR, "BAD Mustache after Summary cut!")
 		str, err = mustache.RenderString(dst, topCtx)
 		if err != nil {
-			log.Println("BAD Mustache Summary?", err)
+			Log(ERROR, "BAD Mustache Summary?", err)
 			str = post["_content"].(*DocContent).Main
 		}
 	}
@@ -610,7 +609,7 @@ func renderPaginator(pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Co
 
 	chronological, _ := FromCtx(topCtx, "db.posts.chronological").([]string)
 	dictionary, _ := FromCtx(topCtx, "db.posts.dictionary").(map[string]Mapper)
-	siteTitle , _ := FromCtx(topCtx, "site.title").(string)
+	siteTitle, _ := FromCtx(topCtx, "site.title").(string)
 
 	page_count := len(chronological)/per_page + 1
 	if len(chronological)%per_page == 0 {
@@ -631,11 +630,11 @@ func renderPaginator(pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Co
 
 	one_page := make([]Mapper, 0)
 	current_page_number := 0
-	log.Println("Total posts: ", len(chronological))
+	Log(INFO, "Total posts: %5d", len(chronological))
 	for i, post_id := range chronological {
 		if i != 0 && i%per_page == 0 {
 			current_page_number++
-			log.Printf("Rendering page #%d with %d posts", current_page_number, len(one_page))
+			Log(INFO, "Rendering page #%d with %d posts", current_page_number, len(one_page))
 			posts_ctx["current_page_number"] = current_page_number
 			posts_ctx["paginator"] = one_page
 			if current_page_number >= 2 {
@@ -645,7 +644,7 @@ func renderPaginator(pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Co
 			widgetCtx := PrapareWidgets(widgets, make(Mapper), topCtx)
 			renderOnePager(paginator_navigation[current_page_number-1].String("url"), layout, layouts,
 				mustache.MakeContexts(map[string]interface{}{"posts": posts_ctx,
-					"page": map[string]interface{}{"title": fmt.Sprintf("%s Page %d",siteTitle, current_page_number)}}, topCtx, widgetCtx))
+					"page": map[string]interface{}{"title": fmt.Sprintf("%s Page %d", siteTitle, current_page_number)}}, topCtx, widgetCtx))
 			one_page = one_page[0:0]
 		}
 		post := dictionary[post_id]
@@ -654,7 +653,7 @@ func renderPaginator(pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Co
 	}
 	if len(one_page) > 0 {
 		current_page_number++
-		log.Printf("Rendering page #%d with %d post(s)", current_page_number, len(one_page))
+		Log(DEBUG, "Rendering page #%d with %d post(s)", current_page_number, len(one_page))
 		posts_ctx["current_page_number"] = current_page_number
 		posts_ctx["paginator"] = one_page
 		if current_page_number >= 2 {
@@ -665,14 +664,14 @@ func renderPaginator(pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Co
 		widgetCtx := PrapareWidgets(widgets, m, topCtx)
 		renderOnePager(paginator_navigation[current_page_number-1].String("url"), layout, layouts,
 			mustache.MakeContexts(map[string]interface{}{"posts": posts_ctx,
-				"page": map[string]interface{}{"title": fmt.Sprintf("%s Page %d",siteTitle, current_page_number)}}, topCtx, widgetCtx))
+				"page": map[string]interface{}{"title": fmt.Sprintf("%s Page %d", siteTitle, current_page_number)}}, topCtx, widgetCtx))
 	}
 }
 
 func renderOnePager(url string, layoutName string, layouts map[string]Mapper, ctx mustache.Context) {
 	str, err := RenderInLayout("", layoutName, layouts, ctx)
 	if err != nil {
-		log.Println("ERR: Pager ", url, err)
+		Log(ERROR, "Pager %s %s", url, err)
 		return
 	}
 	if strings.HasSuffix(url, "/") {

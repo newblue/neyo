@@ -8,7 +8,6 @@ import (
 	"github.com/wendal/mustache"
 	"io"
 	"io/ioutil"
-	"log"
 	URL "net/url"
 	"os"
 	"path/filepath"
@@ -26,7 +25,7 @@ func BuildPlayload(root string) (payload map[string]interface{}, err error) {
 	}
 	root, err = filepath.Abs(root)
 	root += "/"
-	log.Println("root=", root)
+	Log(INFO, "root = %s", root)
 
 	// 开始读取配置
 	payload = make(Mapper)
@@ -35,14 +34,16 @@ func BuildPlayload(root string) (payload map[string]interface{}, err error) {
 	var site Mapper
 
 	//-----------------------------------
-	cnf, err = ReadYml(root + CONFIG_YAML)
+	cfg_path := filepath.Join(root, CONFIG_YAML)
+	cnf, err = ReadYml(cfg_path)
 	if err != nil {
-		log.Println("Fail to read ", root+CONFIG_YAML, err)
+		Log(ERROR, "Fail to read %s %s", cfg_path, err)
 		return
 	}
-	site, err = ReadYml(root + SITE_YAML)
+	site_path := filepath.Join(root, SITE_YAML)
+	site, err = ReadYml(site_path)
 	if err != nil {
-		log.Println("Fail to read ", root+SITE_YAML, err)
+		Log(ERROR, "Fail to read %s %s", site_path, err)
 		return
 	}
 
@@ -86,9 +87,10 @@ func BuildPlayload(root string) (payload map[string]interface{}, err error) {
 
 	// 读取theme的配置
 	//---------------------------------
-	themeCnf, err := ReadYml(fmt.Sprintf("%s/themes/%s/theme.yml", root, themeName))
+	theme_path := filepath.Join(root, fmt.Sprintf("themes/%s/theme.yml", themeName))
+	themeCnf, err := ReadYml(theme_path)
 	if err != nil {
-		log.Println("No such theme ?", themeName, err)
+		Log(ERROR, "No such theme ? %s %s", themeName, err)
 		return
 	}
 	payload["theme"] = themeCnf
@@ -273,7 +275,7 @@ func BuildPlayload(root string) (payload map[string]interface{}, err error) {
 		if _monthc == nil {
 			_monthc = &CollatedMonth{month, _month, []string{}}
 			_yearc.months[month] = _monthc
-			//log.Println("Add>>", year, month, post["id"])
+			Log(DEBUG, "Add %s %s %s", year, month, post["id"])
 		}
 		_monthc.Posts = append(_monthc.Posts, id)
 
@@ -423,7 +425,7 @@ func LoadPost(root string, path string) (ctx Mapper, err error) {
 
 // 读取包含元数据的文件,返回ctx(包含文本)
 func ReadMuPage(path string) (ctx map[string]interface{}, err error) {
-	//log.Println("Read", path)
+	Log(DEBUG, "Read %s", path)
 	err = nil
 	ctx = nil
 
@@ -502,9 +504,8 @@ func AsStrings(v interface{}) (strs []string) {
 	case []string:
 		strs = v.([]string)
 	default:
-		log.Println(">>", v)
+		Log(INFO, "%s", v)
 	}
-	//log.Println("##", strs)
 	return
 }
 
@@ -519,7 +520,7 @@ func EncodePathInfo(pathinfo string) string {
 func DecodePathInfo(pathinfo string) string {
 	pathinfo2, err := URL.QueryUnescape(pathinfo)
 	if err != nil {
-		log.Println("DecodePathInfo Fail", err)
+		Log(ERROR, "DecodePathInfo fail %s", err)
 		return pathinfo
 	}
 	return pathinfo2
@@ -566,7 +567,7 @@ func (p Posts) Less(i, j int) bool {
 	if p1_time.Unix() != p2_time.Unix() {
 		return p1_time.After(p2_time)
 	}
-	
+
 	return p[i].Id() > p[j].Id()
 }
 
@@ -590,7 +591,7 @@ func SortPosts(dict map[string]Mapper, post_ids []string) []string {
 func LoadLayouts(root string, theme string) map[string]Mapper {
 	layouts := make(map[string]Mapper)
 	var layout Mapper
-	log.Println(">>>", root+"themes/"+theme+"/layouts/")
+	Log(INFO, "Load layouts: %sthemes/%s/layouts/", root, theme)
 	filepath.Walk(root+"themes/"+theme+"/layouts/", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -621,7 +622,7 @@ func LoadLayouts(root string, theme string) map[string]Mapper {
 			}
 			tpl, err := mustache.Parse(bytes.NewBufferString(layout["_content"].(*DocContent).Source))
 			if err != nil {
-				log.Println("Bad Layout", path, err)
+				Log(ERROR, "Bad Layout %s %s", path, err)
 				return err
 			}
 			layout["_content"].(*DocContent).TPL = tpl
@@ -636,7 +637,7 @@ func LoadLayouts(root string, theme string) map[string]Mapper {
 		}
 		layoutName := filename[0 : len(filename)-len(filepath.Ext(filename))]
 		layouts[layoutName] = layout
-		log.Println("Load Layout : " + layoutName)
+		Log(INFO, "\tLoad Layout: %s ", layoutName)
 		return nil
 	})
 	return layouts

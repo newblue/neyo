@@ -3,7 +3,6 @@ package gor
 
 import (
 	"encoding/json"
-	"log"
 	"os"
 )
 
@@ -28,8 +27,8 @@ func IsGorDir(path string) bool {
 func PrintJson(v interface{}) {
 	buf, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
-		log.Println("ERR Json Marshal : " + err.Error())
+		Log(ERROR, "Json marshal: %s", err)
 	} else {
-		log.Println(">>\n" + string(buf))
+		Log(INFO, ">>\n%s", string(buf))
 	}
 }
