@@ -149,9 +149,9 @@ func loadConfig(root string) (imgs_cfg Mapper) {
 	if root == "" {
 		root = "."
 	}
-	root, err = filepath.Abs(root)
-	root += "/"
-	Log(INFO, "root = %s", root)
+	root, _ = filepath.Abs(root)
+
+	Log(DEBUG, "root = %s", root)
 
 	cfg, err = ReadYml(root + CONFIG_YAML)
 	if err != nil {

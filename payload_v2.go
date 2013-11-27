@@ -1,88 +1,82 @@
 package neyo
 
 import (
-	//"github.com/wendal/errors"
 	"fmt"
 	"path/filepath"
 	"reflect"
 	"strings"
 )
 
-//基于Struct的Payload,也就是初始加载的阶段
-
-func MakePayLoad(root string) (webSite *WebSite, err error) {
-	webSite = &WebSite{}
+func MakePayLoad(root string) (site *WebSite, err error) {
+	site = &WebSite{}
 	err = nil
 
-	//检查处理的根路径
 	if root == "" {
 		root = "."
 	}
 	root, err = filepath.Abs(root)
 	if err != nil {
-		panic(err)
+		Log(ERROR, "%s", err)
 	}
-	root += "/"
-	webSite.Root = root
-	Log(DEBUG, "root: %s", root)
+	site.Root = root
+	Log(DEBUG, "Root: %s", site.Root)
 
-	webSite.LoadMainConfig()
-	webSite.CheckMainConfig()
-	webSite.MakeBasicURLs()
+	site.LoadMainConfig()
+	site.CheckMainConfig()
+	site.MakeBasicURLs()
 
-	webSite.FixPostPageConfigs()
+	site.FixPostPageConfigs()
 
-	webSite.LoadPages()
-	webSite.LoadPosts()
+	site.LoadPages()
+	site.LoadPosts()
 
 	return
 }
 
-// 读入核心配置
-func (webSite *WebSite) LoadMainConfig() {
+func (self *WebSite) LoadMainConfig() {
 
-	cnf, err := ReadYml(webSite.Root + CONFIG_YAML)
+	cnf, err := ReadYml(filepath.Join(self.Root, CONFIG_YAML))
 	if err != nil {
-		panic(err)
+		Log(ERROR, "Read %s error %s", CONFIG_YAML, err)
 	}
-	ToStruct(cnf, reflect.ValueOf(&webSite.TopCnf))
-	Log(DEBUG, "config.yml\n%s\n", webSite.TopCnf)
+	ToStruct(cnf, reflect.ValueOf(&self.TopCnf))
+	Log(DEBUG, "config.yml\n%s\n", self.TopCnf)
 
-	siteCnf, err := ReadYml(webSite.Root + SITE_YAML)
+	siteCnf, err := ReadYml(self.Root + SITE_YAML)
 	if err != nil {
-		panic(err)
+		Log(ERROR, "Read %s error %s", SITE_YAML, err)
 	}
-	ToStruct(siteCnf, reflect.ValueOf(&webSite.SiteCnf))
-	Log(DEBUG, "site.yml\n%s\n", webSite.SiteCnf)
+	ToStruct(siteCnf, reflect.ValueOf(&self.SiteCnf))
+	Log(DEBUG, "site.yml\n%s\n", self.SiteCnf)
 }
 
-func (webSite *WebSite) CheckMainConfig() {
+func (self *WebSite) CheckMainConfig() {
 
-	themeName := webSite.TopCnf.Theme
-	if themeName == "" { //必须有theme的设置
-		panic("Miss theme config!")
+	themeName := self.TopCnf.Theme
+	if themeName == "" {
+		Log(ERROR, "Miss theme config!")
 	}
 	// 载入theme的设置
-	themeCnf, err := ReadYml(fmt.Sprintf("%s/themes/%s/theme.yml", webSite.Root, themeName))
+	themeCnf, err := ReadYml(fmt.Sprintf("%s/themes/%s/theme.yml", self.Root, themeName))
 	if err != nil {
-		panic("No such theme ? " + themeName + " " + err.Error())
+		Log(ERROR, "No %s theme? %s ", themeName, err.Error())
 	}
-	ToStruct(themeCnf, reflect.ValueOf(&webSite.ThemeCnf))
+	ToStruct(themeCnf, reflect.ValueOf(&self.ThemeCnf))
 
-	webSite.Layouts = LoadLayouts(webSite.Root, themeName)
-	if webSite.Layouts == nil || len(webSite.Layouts) == 0 {
-		panic("Theme without any layout!!")
+	self.Layouts = LoadLayouts(self.Root, themeName)
+	if self.Layouts == nil || len(self.Layouts) == 0 {
+		Log(ERROR, "Theme without any layout!!")
 	}
 
-	production_url := webSite.TopCnf.Production_url
+	production_url := self.TopCnf.Production_url
 	if production_url == "" {
-		panic("Miss production_url")
+		Log(ERROR, "Miss production_url")
 	}
-	if !strings.HasPrefix(production_url, "http://") && !strings.HasPrefix(production_url, "https://") {
-		panic("production_url must start with https:// or http://")
+	if !strings.HasPrefix(production_url, "http://") &&
+		!strings.HasPrefix(production_url, "https://") {
+		Log(ERROR, "production_url must start with https:// or http://")
 	}
 
-	// 域名保证是http/https开头,故,以下的处理,可以按https
 	rootUrl := production_url
 	pos := strings.Index(rootUrl[len("https://"):], "/")
 	basePath := ""
@@ -94,18 +88,18 @@ func (webSite *WebSite) CheckMainConfig() {
 			basePath += "/"
 		}
 	}
-	webSite.RootURL = rootUrl
-	webSite.BasePath = basePath
+	self.RootURL = rootUrl
+	self.BasePath = basePath
 }
 
-func (webSite *WebSite) MakeBasicURLs() {
+func (self *WebSite) MakeBasicURLs() {
 	urls := make(map[string]string)
-	urls["media"] = webSite.BasePath + "assets/media"
-	urls["theme"] = webSite.BasePath + "assets/" + webSite.TopCnf.Theme
-	urls["theme_media"] = urls["theme"] + "/media"
-	urls["theme_javascripts"] = urls["theme"] + "/javascripts"
-	urls["theme_stylesheets"] = urls["theme"] + "/stylesheets"
-	urls["base_path"] = webSite.BasePath
+	urls["media"] = filepath.Join(self.BasePath, "assets/media")
+	urls["theme"] = filepath.Join(self.BasePath, "assets/", self.TopCnf.Theme)
+	urls["theme_media"] = filepath.Join(urls["theme"], "/media")
+	urls["theme_javascripts"] = filepath.Join(urls["theme"], "/javascripts")
+	urls["theme_stylesheets"] = filepath.Join(urls["theme"], "/stylesheets")
+	urls["base_path"] = self.BasePath
 
 	//需要重写?
 	/*
@@ -117,12 +111,12 @@ func (webSite *WebSite) MakeBasicURLs() {
 			}
 		}
 	*/
-	webSite.BaiseURLs = urls
+	self.BaiseURLs = urls
 }
 
-func (webSite *WebSite) FixPostPageConfigs() {
+func (self *WebSite) FixPostPageConfigs() {
 
-	postsCnf := webSite.TopCnf.Posts
+	postsCnf := self.TopCnf.Posts
 	if postsCnf.Permalink == "" {
 		postsCnf.Permalink = "/:categories/:title/"
 	}
@@ -136,7 +130,7 @@ func (webSite *WebSite) FixPostPageConfigs() {
 		postsCnf.Layout = "post"
 	}
 
-	pagesCnf := webSite.TopCnf.Pages
+	pagesCnf := self.TopCnf.Pages
 	if pagesCnf.Layout == "" {
 		pagesCnf.Layout = "page"
 	}
@@ -145,19 +139,19 @@ func (webSite *WebSite) FixPostPageConfigs() {
 	}
 }
 
-func (webSite *WebSite) LoadPages() {
-	pagesCnf := webSite.TopCnf.Pages
-	pages, err := LoadPages(webSite.Root, pagesCnf.Exclude)
+func (self *WebSite) LoadPages() {
+	pagesCnf := self.TopCnf.Pages
+	pages, err := LoadPages(self.Root, pagesCnf.Exclude)
 	if err != nil {
 		return
 	}
 	// 构建导航信息(page列表),及整理page的配置信息
 	navigation := make([]string, 0)
-	webSite.Pages = make(map[string]PageBean)
+	self.Pages = make(map[string]PageBean)
 	for page_id, page := range pages {
 		pageBean := PageBean{}
 		ToStruct(page, reflect.ValueOf(&pageBean))
-		webSite.Pages[page_id] = pageBean
+		self.Pages[page_id] = pageBean
 
 		if pageBean.Layout == "" {
 			pageBean.Layout = pagesCnf.Layout
@@ -179,31 +173,31 @@ func (webSite *WebSite) LoadPages() {
 			}
 		}
 		if strings.HasPrefix(page_url, "/") {
-			pageBean.Url = webSite.BasePath + page_url[1:]
+			pageBean.Url = filepath.Join(self.BasePath, page_url[1:])
 		} else {
-			pageBean.Url = webSite.BasePath + page_url
+			pageBean.Url = filepath.Join(self.BasePath, page_url)
 		}
 
 		if page_id != "index.html" && page_id != "index.md" {
 			navigation = append(navigation, page_id)
 		}
 	}
-	if webSite.SiteCnf.Navigation == nil || len(webSite.SiteCnf.Navigation) == 0 {
-		webSite.SiteCnf.Navigation = navigation
+	if self.SiteCnf.Navigation == nil || len(self.SiteCnf.Navigation) == 0 {
+		self.SiteCnf.Navigation = navigation
 	}
 }
 
-func (webSite *WebSite) LoadPosts() {
-	postsCnf := webSite.TopCnf.Posts
-	posts, err := LoadPosts(webSite.Root, postsCnf.Exclude)
+func (self *WebSite) LoadPosts() {
+	postsCnf := self.TopCnf.Posts
+	posts, err := LoadPosts(self.Root, postsCnf.Exclude)
 	if err != nil {
 		return
 	}
-	webSite.Posts = make(map[string]PostBean)
+	self.Posts = make(map[string]PostBean)
 	for post_id, _post := range posts {
 		postBean := PostBean{}
 		ToStruct(_post, reflect.ValueOf(&postBean))
-		webSite.Posts[post_id] = postBean
+		self.Posts[post_id] = postBean
 
 		if postBean.Layout == "" {
 			postBean.Layout = postsCnf.Layout
@@ -228,7 +222,7 @@ func (webSite *WebSite) LoadPosts() {
 
 	_collated := make(map[string]*CollatedYear)
 
-	for id, post := range webSite.Posts {
+	for id, post := range self.Posts {
 		chronological = append(chronological, id)
 
 		for _, _tag := range post.Tags {
@@ -274,7 +268,7 @@ func (webSite *WebSite) LoadPosts() {
 		post_map["id"] = post.Id
 		post_map["categories"] = post.Categories
 		post_map["permalink"] = post.Permalink
-		CreatePostURL(nil, webSite.BasePath, post_map)
+		CreatePostURL(nil, self.BasePath, post_map)
 		post.Url = post_map["url"].(string)
 	}
 	_ = collated

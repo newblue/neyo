@@ -3,8 +3,8 @@ package neyo
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
-	"github.com/wendal/errors"
 	"github.com/wendal/mustache"
 	"io"
 	"io/ioutil"
@@ -23,9 +23,9 @@ func Compile(public string) error {
 
 	var layouts map[string]Mapper
 
-	payload, err := BuildPlayload("./") // payload,核心上下文的主要部分,不可变
+	payload, err := BuildPayload("./") // payload,核心上下文的主要部分,不可变
 	if err != nil {
-		Log(INFO, "Build PayLoad FAIL!!")
+		Log(INFO, "Build payload fail, %s!!", err)
 		return err
 	}
 
@@ -47,14 +47,14 @@ func Compile(public string) error {
 	defer os.Remove(".tmp_partials")
 
 	db_posts_dict, _ := payload_ctx.Get("db.posts.dictionary")
-	Log(DEBUG, "%s", len(db_posts_dict.Val.Interface().(map[string]Mapper)))
+	Log(DEBUG, "Total of db posts dictionary: %d", len(db_posts_dict.Val.Interface().(map[string]Mapper)))
 	for id, post := range db_posts_dict.Val.Interface().(map[string]Mapper) {
 		_tmp, err := PrapreMainContent(id, post["_content"].(*DocContent).Source, payload_ctx)
 		if err != nil {
 			return err
 		}
 		post["_content"].(*DocContent).Main = _tmp
-		Log(DEBUG, _tmp)
+		Log(DEBUG, "Markdown to HTML: \n%s\n", _tmp)
 	}
 
 	helpers := make(map[string]mustache.SectionRenderFunc)
@@ -90,7 +90,7 @@ func Compile(public string) error {
 		dynamicMapper["assets"] = PrapareAssets(themeName, page.Layout(), topCtx) + widget_assets
 		widgetCtx := PrapareWidgets(widgets, page, topCtx)
 		ctx = mustache.MakeContexts(page, dynamicMapper, topCtx, widgetCtx)
-		Log(DEBUG, ctx.Dir(), topCtx.Dir())
+		//Log(DEBUG, "%s %s", ctx.Dir(), topCtx.Dir())
 		_tmp, err := PrapreMainContent(id, docCont.Source, ctx)
 		if err != nil {
 			return err
@@ -99,7 +99,7 @@ func Compile(public string) error {
 
 		str, err = RenderInLayout(docCont.Main, page.Layout(), layouts, ctx)
 		if err != nil {
-			return errors.New(id + ">" + err.Error())
+			return errors.New(fmt.Sprintf("Page %d > %s", id, err.Error()))
 		}
 		WriteTo(public, page.Url(), str)
 	}
@@ -116,7 +116,7 @@ func Compile(public string) error {
 
 		str, err = RenderInLayout(docCont.Main, post.Layout(), layouts, ctx)
 		if err != nil {
-			return errors.New(id + ">" + err.Error())
+			return errors.New(fmt.Sprintf("Post %d > %s", id, err.Error()))
 		}
 
 		WriteTo(public, post.Url(), str)
@@ -145,14 +145,17 @@ func Compile(public string) error {
 }
 
 func RenderInLayout(content string, layoutName string, layouts map[string]Mapper, ctx mustache.Context) (string, error) {
-	Log(DEBUG, "Render Layout", layoutName, ">>", content, "<<END")
+	Log(DEBUG, "Render layout %q >>\n%s\nEOF\n", layoutName, content)
 	ctx2 := make(map[string]string)
 	ctx2["content"] = content
 	layout := layouts[layoutName]
 	if layout == nil {
-		return "", errors.New("Not such Layout : " + layoutName)
+		errMsg := fmt.Sprintf("Not found %s layout", layoutName)
+		return "", errors.New(errMsg)
 	}
-	Log(DEBUG, layoutName, layout["_content"])
+	if c, ok := layout["_content"].(string); ok {
+		Log(DEBUG, "Layout %q >>\n%s\nEOF", layoutName, c)
+	}
 	buf := &bytes.Buffer{}
 	err := layout["_content"].(*DocContent).TPL.Render(mustache.MakeContexts(ctx2, ctx), buf)
 	if err != nil {
@@ -300,21 +303,21 @@ func CtxHelpers(payload Mapper, ctxHelper map[string]func(interface{}) interface
 
 		//current_page
 		current_page_id := FromCtx(topCtx, "current_page_id")
-		Log(DEBUG, "current_page_id", current_page_id)
+		Log(DEBUG, "current_page_id = %s", current_page_id)
 
-		Log(DEBUG, "%s", in)
+		Log(DEBUG, "pages = %v", in)
 		ids, ok := in.([]interface{})
 		if !ok {
-			Log(INFO, "Not String Array?")
+			Log(INFO, "Not string array?")
 			return false
 		}
 
 		_pages := make([]Mapper, 0)
 		for _, id := range ids {
 			p := pages[id.(string)]
-			if current_page_id != nil {
+			if p != nil && current_page_id != nil {
 				p["is_active_page"] = id == current_page_id.(string)
-				Log(DEBUG, "is_active_page", id == current_page_id.(string))
+				Log(DEBUG, "is_active_page %v", id == current_page_id.(string))
 			}
 			_pages = append(_pages, p)
 		}
@@ -356,7 +359,7 @@ func CtxHelpers(payload Mapper, ctxHelper map[string]func(interface{}) interface
 			post = dict[id]
 		}
 		index := post_id_map[post.Id()]
-		Log(DEBUG, "%s %s", index, post.Id())
+		Log(DEBUG, "%d %s", index, post.Id())
 		if index == 0 {
 			return false
 		}
@@ -393,14 +396,13 @@ func CtxHelpers(payload Mapper, ctxHelper map[string]func(interface{}) interface
 }
 
 func PrapreMainContent(id string, content string, ctx mustache.Context) (string, error) {
-	//mdParser := markdown.NewParser(&markdown.Extensions{Smart: true})
 	str, err := mustache.RenderString(content, ctx)
 	if err != nil {
-		Log(INFO, "Error When Parse >> "+id)
+		Log(INFO, "Error when parse %s", id)
 		return str, err
 	}
 	if strings.HasSuffix(id, ".md") || strings.HasSuffix(id, ".markdown") {
-		Log(INFO, "Read markdown: %s", id)
+		Log(DEBUG, "Read markdown: %s", id)
 		str = MarkdownToHtml(str)
 	}
 	return str, nil
@@ -424,6 +426,7 @@ func WriteTo(public, url, content string) {
 	url = DecodePathInfo(url)
 
 	dstPath := filepath.Join(public, url)
+	Log(INFO, "Write %s", dstPath)
 	os.MkdirAll(filepath.Dir(dstPath), DEFAULT_DIR_MODE)
 	ioutil.WriteFile(dstPath, []byte(content), DEFAULT_FILE_MODE)
 }
@@ -527,33 +530,34 @@ func copyDir(src string, target string) error {
 	for _, finfo := range finfos {
 		if strings.HasPrefix(finfo.Name(), ".") {
 			continue
-		}
-		if finfo.Name() == "config.yml" {
+		} else if finfo.Name() == "config.yml" {
 			continue
 		}
-		Log(DEBUG, finfo.Name())
-		dst := target + "/" + finfo.Name()
+		//Log(DEBUG, finfo.Name())
+		dst_path := filepath.Join(target, finfo.Name())
+		src_path := filepath.Join(src, finfo.Name())
 		if finfo.IsDir() {
-			copyDir(src+"/"+finfo.Name(), dst)
+			copyDir(src_path, dst_path)
 			continue
 		}
 
-		os.MkdirAll(filepath.Dir(dst), os.ModePerm)
-		f, err := os.Open(src + "/" + finfo.Name())
+		os.MkdirAll(filepath.Dir(dst_path), DEFAULT_DIR_MODE)
+
+		src_file, err := os.Open(src_path)
 		if err != nil {
-			Log(ERROR, "Open file error %s", err)
+			Log(ERROR, "Open %s error %s", src_path, err)
 			continue
 		}
-		defer f.Close()
-		f2, err := os.OpenFile(dst, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+		defer src_file.Close()
+
+		dst_file, err := os.OpenFile(dst_path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, DEFAULT_FILE_MODE)
 		if err != nil {
-			Log(ERROR, "%s", err)
+			Log(ERROR, "Open %s error %s", dst_path, err)
 			continue
 		}
-		defer f2.Close()
-		io.Copy(f2, f)
-		f.Close()
-		f2.Close()
+		defer dst_file.Close()
+
+		io.Copy(dst_file, src_file)
 	}
 	return nil
 }

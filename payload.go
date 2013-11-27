@@ -17,17 +17,13 @@ import (
 	"time"
 )
 
-// 构建PayLoad
-func BuildPlayload(root string) (payload map[string]interface{}, err error) {
-	//检查处理的根路径
-	if root == "" {
-		root = "."
+func BuildPayload(root string) (payload map[string]interface{}, err error) {
+	if wd, err := os.Getwd(); root == "" && err == nil {
+		root = wd
 	}
 	root, err = filepath.Abs(root)
-	root += "/"
-	Log(INFO, "root = %s", root)
+	Log(DEBUG, "ROOT: %s", root)
 
-	// 开始读取配置
 	payload = make(Mapper)
 	err = nil
 	var cnf Mapper
@@ -37,13 +33,13 @@ func BuildPlayload(root string) (payload map[string]interface{}, err error) {
 	cfg_path := filepath.Join(root, CONFIG_YAML)
 	cnf, err = ReadYml(cfg_path)
 	if err != nil {
-		Log(ERROR, "Fail to read %s %s", cfg_path, err)
+		Log(ERROR, "Read %s error %s", cfg_path, err)
 		return
 	}
 	site_path := filepath.Join(root, SITE_YAML)
 	site, err = ReadYml(site_path)
 	if err != nil {
-		Log(ERROR, "Fail to read %s %s", site_path, err)
+		Log(ERROR, "Read %s error %s", site_path, err)
 		return
 	}
 
@@ -87,10 +83,10 @@ func BuildPlayload(root string) (payload map[string]interface{}, err error) {
 
 	// 读取theme的配置
 	//---------------------------------
-	theme_path := filepath.Join(root, fmt.Sprintf("themes/%s/theme.yml", themeName))
+	theme_path := filepath.Join(root, "themes/", themeName, "/theme.yml")
 	themeCnf, err := ReadYml(theme_path)
 	if err != nil {
-		Log(ERROR, "No such theme ? %s %s", themeName, err)
+		Log(ERROR, "Not found theme %s? %s", themeName, err)
 		return
 	}
 	payload["theme"] = themeCnf
@@ -98,11 +94,11 @@ func BuildPlayload(root string) (payload map[string]interface{}, err error) {
 	// 设置基础URL
 	//-------------------------------
 	urls := make(map[string]string)
-	urls["media"] = basePath + "assets/media"
-	urls["theme"] = basePath + "assets/" + themeName
-	urls["theme_media"] = urls["theme"] + "/media"
-	urls["theme_javascripts"] = urls["theme"] + "/javascripts"
-	urls["theme_stylesheets"] = urls["theme"] + "/stylesheets"
+	urls["media"] = filepath.Join(basePath, "assets/media")
+	urls["theme"] = filepath.Join("assets/", themeName)
+	urls["theme_media"] = filepath.Join(urls["theme"], "/media")
+	urls["theme_javascripts"] = filepath.Join(urls["theme"], "/javascripts")
+	urls["theme_stylesheets"] = filepath.Join(urls["theme"], "/stylesheets")
 	urls["base_path"] = basePath
 
 	if site["urls"] != nil { //允许用户自定义基础URL,实现CDN等功能
@@ -323,7 +319,7 @@ func LoadPages(root string, exclude string) (pages map[string]Mapper, err error)
 			return
 		}
 	}
-	err = filepath.Walk(root+"pages/", func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(filepath.Join(root, "pages/"), func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -361,18 +357,19 @@ func LoadPosts(root string, exclude string) (posts map[string]Mapper, err error)
 	if exclude != "" {
 		_exclude, err = regexp.Compile(exclude)
 		if err != nil {
-			err = errors.New("BAD pages exclude regexp : " + exclude + "\t" + err.Error())
+			err = errors.New(fmt.Sprintf("BAD pages exclude regexp %q error %s", exclude, err.Error()))
 			return
 		}
 	}
-	err = filepath.Walk(root+"posts/", func(path string, info os.FileInfo, err error) error {
+	posts_path := filepath.Join(root, "posts/")
+	err = filepath.Walk(posts_path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() || strings.HasPrefix(filepath.Base(path), ".") {
 			return nil
 		}
-		if _exclude != nil && _exclude.Match([]byte(path[len(root+"posts/"):])) {
+		if _exclude != nil && _exclude.Match([]byte(path[len(posts_path):])) {
 			return nil
 		}
 		post, err := LoadPost(root, path)

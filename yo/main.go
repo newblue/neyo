@@ -36,17 +36,16 @@ var (
 
 func init() {
 	flag.Parse()
-	fmt.Printf("%s BETA(%s). a tool fork from gor\n\n", NAME, VER)
 }
 
 func main() {
 	args := flag.Args()
 	if len(args) == 0 || len(args) > 3 {
-		PrintUsage()
+		Usage()
 	}
 	switch args[0] {
 	default:
-		PrintUsage()
+		Usage()
 	case "config":
 		_config()
 	case "new":
@@ -74,7 +73,7 @@ func _posts() {
 
 func _post(args []string) {
 	if len(args) == 1 {
-		neyo.Log(neyo.INFO, "%s post <title> {image diretory}", NAME)
+		Usage()
 	} else if len(args) == 2 {
 		path := neyo.CreateNewPost(args[1])
 		edit_new_post(path)
@@ -101,17 +100,17 @@ func edit_new_post(path string) {
 		var ask string
 		if _, err := fmt.Scan(&ask); err == nil {
 			if _ask := strings.ToLower(ask); _ask == "y" || _ask == "yes" {
-				fmt.Printf("Edit %s\n", editor, path)
+				neyo.Log(neyo.INFO, "Edit %s\n", editor, path)
 				cmd := exec.Command(editor, path)
 				cmd.Stdin = os.Stdin
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
 				if err := cmd.Start(); err == nil {
 					if err := cmd.Wait(); err != nil {
-						neyo.Log(neyo.ERROR, "Wait %s", err)
+						neyo.Log(neyo.ERROR, "%s", err)
 					}
 				} else {
-					neyo.Log(neyo.ERROR, "Start %s", err)
+					neyo.Log(neyo.ERROR, "%s", err)
 				}
 			}
 		}
@@ -123,7 +122,7 @@ func _http(args []string) {
 	public := neyo.DEFAULT_PUBLIC_DIRETORY
 
 	if la := len(args); la < 2 {
-		fmt.Printf("%s http <address:port> [public diretory]\n", NAME)
+		Usage()
 	} else if la == 2 {
 		address = args[1]
 	} else if la == 3 {
@@ -185,7 +184,7 @@ func _update_zip(args []string) {
 			return nil
 		})
 	} else {
-		fmt.Printf("\t %s zip.go  <diretory>      Archive project directory, and make zip.go\n", NAME)
+		Usage()
 	}
 }
 func EncodeIntoGo(filename, gofilename string, varname string) error {
@@ -222,32 +221,31 @@ func _config() {
 	if err != nil {
 		neyo.Log(neyo.ERROR, "Read config error %s", err)
 	}
-	neyo.Log(neyo.INFO, "RuhohSpec: %s", cnf["RuhohSpec"])
 	buf, err := json.MarshalIndent(cnf, "", "  ")
 	if err != nil {
 		neyo.Log(neyo.ERROR, "Marshal error %s", err)
 	}
-	fmt.Printf("Global config\n %s", string(buf))
+	fmt.Printf("Global config: \n%s\n", string(buf))
 }
 
 func _new(args []string) {
 	if len(args) == 1 {
-		fmt.Printf("\t%s new <diertory>\n", NAME)
+		Usage()
 	} else {
 		new_init(args[1])
 	}
 }
 
 func _payload() {
-	payload, err := neyo.BuildPlayload("./")
+	payload, err := neyo.BuildPayload("./")
 	if err != nil {
-		neyo.Log(neyo.ERROR, "Build paly load %s", err)
+		neyo.Log(neyo.ERROR, "Build payload error %s", err)
 	}
 	buf, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
 		neyo.Log(neyo.ERROR, "%s", err)
 	}
-	neyo.Log(neyo.INFO, string(buf))
+	fmt.Printf("Payload: \n%s\n ", string(buf))
 }
 
 func _compile(args []string) {
