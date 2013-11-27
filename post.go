@@ -38,7 +38,7 @@ func CreateNewPost(title string) (path string) {
 	if err == nil || !os.IsNotExist(err) {
 		Log(ERROR, "Post file(%s) exist?", path)
 	}
-	err = ioutil.WriteFile(path, []byte(fmt.Sprintf(TPL_NEW_POST, title, time.Now().Format("2006-01-02"))), os.ModePerm)
+	err = ioutil.WriteFile(path, []byte(fmt.Sprintf(TPL_NEW_POST, title, time.Now().Format("2006-01-02"))), 0600)
 	if err != nil {
 		Log(ERROR, "%s", err)
 	}

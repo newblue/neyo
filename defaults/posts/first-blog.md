@@ -33,8 +33,11 @@ tags:
 编译你的博客,并预览之
 -------------------
 
-	gor compile #编译
-	gor http
+编译
+
+	yo compile
+
+	yo http
 
 然后打开你的浏览器,访问 http://127.0.0.1:8080 来预览
 
@@ -53,19 +56,6 @@ tags:
 3. 将compiled目录,作为根路径,提交上去github.com上
 4. 稍等几分钟, 你即可通过 http://username.github.com 访问到
 
-附上git教程 [GitBook中文版](http://gitbook.liuhui998.com/)
-----------------------------------------------------
-
-一般来说,你只需要几个简单的git命令就足以应付大部分需求(仅示例)
-
-	git clone git://github.com/wendal/wendal.net.git
-	git add -A
-	git commit -m "..."
-	git pull
-	git push
-
-用gor编写博客将会是一件很开心的事,如果有任何意见或建议,欢迎到 [gor的官网](http://github.com/wendal/gor) 提交issue
--------------------------------------------------
+#最后
 
 祝你使用愉快
-===========
