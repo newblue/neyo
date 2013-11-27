@@ -1,15 +1,18 @@
 package main
 
 import (
+	"archive/zip"
 	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/newblue/gor"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime/pprof"
 	"strings"
 )
@@ -61,7 +64,7 @@ func main() {
 	case "pprof":
 		_pprof()
 	case "zip.go":
-		_update_zip()
+		_update_zip(args)
 	}
 }
 
@@ -121,18 +124,78 @@ func _http(args []string) {
 	gor.Log(gor.INFO, "%s", http.ListenAndServe(*http_addr, http.FileServer(http.Dir("compiled"))))
 }
 
-func _update_zip() {
-	d, _ := ioutil.ReadFile("gor-content.zip")
-	_zip, _ := os.OpenFile("zip.go", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
-	header := `package main
-    const INIT_ZIP="`
+func _update_zip(args []string) {
+	ignore_hide := update_zip_command.Bool("ignore-hide", true, "Ignore hide files.")
+	update_zip_command.Parse(args)
+	args = update_zip_command.Args()
+	if len(args) == 2 {
+		dir := args[1]
+
+		tmp_file, err := ioutil.TempFile("./", "temp-")
+		if err != nil {
+			gor.Log(gor.ERROR, "Open temp file error %s", err)
+		} else {
+			gor.Log(gor.DEBUG, "Create temp file %s", tmp_file.Name())
+		}
+		defer os.Remove(tmp_file.Name())
+		defer EncodeIntoGo(tmp_file.Name(), "zip.go", "INIT_ZIP")
+		defer tmp_file.Close()
+
+		z := zip.NewWriter(tmp_file)
+		defer func() {
+			if err := z.Close(); err != nil {
+				gor.Log(gor.ERROR, "Close zip file %s", err)
+			} else {
+				gor.Log(gor.INFO, "zip.go updated.\n")
+			}
+		}()
+
+		filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			basename := filepath.Base(path)
+			is_ignore := strings.HasPrefix(basename, ".") && *ignore_hide
+
+			if info.IsDir() {
+				return nil
+			} else if is_ignore {
+				gor.Log(gor.WARN, "Ignore archive %s", path)
+				if info.IsDir() {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			zip_path := strings.TrimLeft(path[len(dir):len(path)], "/")
+			gor.Log(gor.DEBUG, "%s\n\t->zip://%s\n", path, zip_path)
+			if sf, err := os.Open(path); err != nil {
+				gor.Log(gor.ERROR, "Open %s error %s", path, err)
+			} else if df, err := z.Create(zip_path); err != nil {
+				gor.Log(gor.ERROR, "Open zip://%s error %s", zip_path, err)
+			} else {
+				io.Copy(df, sf)
+				if err := sf.Close(); err != nil {
+					gor.Log(gor.ERROR, "Close %s error %s", path, err)
+				}
+			}
+			return nil
+		})
+	} else {
+		fmt.Printf("\t %s zip.go [-ignore-hide] <diretory>      Archive project directory, and make zip.go\n", os.Args[0])
+	}
+}
+func EncodeIntoGo(filename, gofilename string, varname string) error {
+	d, _ := ioutil.ReadFile(filename)
+	_zip, _ := os.OpenFile(gofilename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
+
+	header := fmt.Sprintf(`package main
+    const %s="`, varname)
+
 	_zip.Write([]byte(header))
 	encoder := base64.NewEncoder(base64.StdEncoding, _zip)
 	encoder.Write(d)
 	encoder.Close()
-	_zip.Write([]byte(`"`))
+	_zip.Write([]byte("\"\n"))
 	_zip.Sync()
-	_zip.Close()
+	return _zip.Close()
 }
 
 func _pprof() {
