@@ -125,13 +125,10 @@ func _http(args []string) {
 }
 
 func _update_zip(args []string) {
-	ignore_hide := update_zip_command.Bool("ignore-hide", true, "Ignore hide files.")
-	update_zip_command.Parse(args)
-	args = update_zip_command.Args()
 	if len(args) == 2 {
 		dir := args[1]
 
-		tmp_file, err := ioutil.TempFile("./", "temp-")
+		tmp_file, err := ioutil.TempFile("", "temp-")
 		if err != nil {
 			gor.Log(gor.ERROR, "Open temp file error %s", err)
 		} else {
@@ -152,7 +149,7 @@ func _update_zip(args []string) {
 
 		filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			basename := filepath.Base(path)
-			is_ignore := strings.HasPrefix(basename, ".") && *ignore_hide
+			is_ignore := strings.HasPrefix(basename, ".")
 
 			if info.IsDir() {
 				return nil
