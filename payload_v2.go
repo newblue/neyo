@@ -24,7 +24,7 @@ func MakePayLoad(root string) (webSite *WebSite, err error) {
 	}
 	root += "/"
 	webSite.Root = root
-	Log(DEBUG, "root dir: ", root)
+	Log(DEBUG, "root: %s", root)
 
 	webSite.LoadMainConfig()
 	webSite.CheckMainConfig()

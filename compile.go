@@ -15,7 +15,7 @@ import (
 )
 
 // 编译整个网站
-func Compile() error {
+func Compile(public string) error {
 	var ctx mustache.Context // 渲染上下文
 	var docCont *DocContent  // 文档内容,仅作为变量声明
 	var str string           // 仅声明,以减少不一样的编译错误
@@ -38,7 +38,13 @@ func Compile() error {
 
 	os.Remove(".tmp_partials")
 	copyDir("partials", ".tmp_partials")
-	copyDir("themes/"+themeName+"/partials", ".tmp_partials")
+
+	theme_partials := filepath.Join("themes/", themeName, "/partials")
+	if fi, err := os.Stat(theme_partials); err == nil && fi.IsDir() {
+		copyDir(theme_partials, ".tmp_partials")
+	}
+
+	defer os.Remove(".tmp_partials")
 
 	db_posts_dict, _ := payload_ctx.Get("db.posts.dictionary")
 	Log(DEBUG, "%s", len(db_posts_dict.Val.Interface().(map[string]Mapper)))
@@ -51,7 +57,6 @@ func Compile() error {
 		Log(DEBUG, _tmp)
 	}
 
-	//mdParser = markdown.NewParser(&markdown.Extensions{Smart: true})
 	helpers := make(map[string]mustache.SectionRenderFunc)
 	ctxHelpers := make(map[string]func(interface{}) interface{})
 
@@ -73,7 +78,7 @@ func Compile() error {
 		widget_assets += PrapareAssets(themeName, "widgets", topCtx)
 	}
 
-	CopyResources(themeName)
+	CopyResources(public, themeName)
 
 	// Render Pages
 	pages := payload["db"].(map[string]interface{})["pages"].(map[string]Mapper)
@@ -96,7 +101,7 @@ func Compile() error {
 		if err != nil {
 			return errors.New(id + ">" + err.Error())
 		}
-		WriteTo(page.Url(), str)
+		WriteTo(public, page.Url(), str)
 	}
 
 	// Render Posts
@@ -114,7 +119,7 @@ func Compile() error {
 			return errors.New(id + ">" + err.Error())
 		}
 
-		WriteTo(post.Url(), str)
+		WriteTo(public, post.Url(), str)
 	}
 
 	//我们还得把分页给解决了哦
@@ -123,7 +128,7 @@ func Compile() error {
 		pgCnf = paginatorCnf.(map[string]interface{})
 		if _, ok := layouts[pgCnf.String("layout")]; ok {
 			Log(INFO, "Enable paginator")
-			renderPaginator(pgCnf, layouts, topCtx, widgets)
+			renderPaginator(public, pgCnf, layouts, topCtx, widgets)
 		} else {
 			Log(INFO, "Layout Not Found", pgCnf.String("layout"))
 		}
@@ -131,7 +136,7 @@ func Compile() error {
 
 	if Plugins != nil {
 		for _, plugin := range Plugins {
-			plugin.Exec(topCtx)
+			plugin.Exec(public, topCtx)
 		}
 	}
 
@@ -409,18 +414,18 @@ func FromCtx(ctx mustache.Context, key string) interface{} {
 	return nil
 }
 
-func WriteTo(url string, content string) {
+func WriteTo(public, url, content string) {
 	if strings.HasSuffix(url, "/") {
-		url = url + "index.html"
+		url = filepath.Join(url, "index.html")
 	} else if !strings.HasSuffix(url, ".html") {
-		url = url + "/index.html"
+		url = filepath.Join(url, "/index.html")
 	}
 
 	url = DecodePathInfo(url)
 
-	dstPath := "compiled" + url
-	os.MkdirAll(filepath.Dir(dstPath), os.ModePerm)
-	ioutil.WriteFile(dstPath, []byte(content), os.ModePerm)
+	dstPath := filepath.Join(public, url)
+	os.MkdirAll(filepath.Dir(dstPath), DEFAULT_DIR_MODE)
+	ioutil.WriteFile(dstPath, []byte(content), DEFAULT_FILE_MODE)
 }
 
 func PrapareAssets(theme string, layoutName string, topCtx mustache.Context) string {
@@ -495,18 +500,20 @@ func PrapareAssets(theme string, layoutName string, topCtx mustache.Context) str
 	return rs
 }
 
-func CopyResources(themeName string) {
-	copyDir("others", "compiled")
-	copyDir("media", "compiled/assets/media")
-	copyDir("themes/"+themeName, "compiled/assets/"+themeName)
-	copyDir("widgets", "compiled/assets/widgets")
+func CopyResources(public, themeName string) {
+	if fi, err := os.Stat("others"); err == nil && fi.IsDir() {
+		copyDir("others", public)
+	}
+	copyDir("media", filepath.Join(public, "/assets/media"))
+	copyDir(filepath.Join("themes/", themeName), filepath.Join(public, "/assets/", themeName))
+	copyDir("widgets", filepath.Join(public, "/assets/widgets"))
 }
 
 func copyDir(src string, target string) error {
 	Log(DEBUG, "Copy directory from %s to %s", src, target)
 	fst, err := os.Stat(src)
 	if err != nil {
-		Log(ERROR, "Copy directory %s", err)
+		Log(ERROR, "Copy directory %s error %s", src, err)
 		return err
 	}
 	if !fst.IsDir() {
@@ -514,7 +521,7 @@ func copyDir(src string, target string) error {
 	}
 	finfos, err := ioutil.ReadDir(src)
 	if err != nil {
-		Log(ERROR, "%s", err)
+		Log(ERROR, "Read diretory %s %s", src, err)
 		return err
 	}
 	for _, finfo := range finfos {
@@ -591,7 +598,7 @@ func MakeSummary(post Mapper, lines int, topCtx mustache.Context) string {
 	return MarkdownToHtml(str)
 }
 
-func renderPaginator(pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Context, widgets []Widget) {
+func renderPaginator(public string, pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Context, widgets []Widget) {
 	summary_lines := int(FromCtx(topCtx, "site.config.posts.summary_lines").(int64))
 	per_page := pgCnf.Int("per_page")
 	if per_page < 2 {
@@ -642,7 +649,7 @@ func renderPaginator(pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Co
 			}
 			paginator_navigation[current_page_number-1]["is_active_page"] = true
 			widgetCtx := PrapareWidgets(widgets, make(Mapper), topCtx)
-			renderOnePager(paginator_navigation[current_page_number-1].String("url"), layout, layouts,
+			renderOnePager(public, paginator_navigation[current_page_number-1].String("url"), layout, layouts,
 				mustache.MakeContexts(map[string]interface{}{"posts": posts_ctx,
 					"page": map[string]interface{}{"title": fmt.Sprintf("%s Page %d", siteTitle, current_page_number)}}, topCtx, widgetCtx))
 			one_page = one_page[0:0]
@@ -662,20 +669,20 @@ func renderPaginator(pgCnf Mapper, layouts map[string]Mapper, topCtx mustache.Co
 		paginator_navigation[current_page_number-1]["is_active_page"] = true
 		m := make(Mapper)
 		widgetCtx := PrapareWidgets(widgets, m, topCtx)
-		renderOnePager(paginator_navigation[current_page_number-1].String("url"), layout, layouts,
+		renderOnePager(public, paginator_navigation[current_page_number-1].String("url"), layout, layouts,
 			mustache.MakeContexts(map[string]interface{}{"posts": posts_ctx,
 				"page": map[string]interface{}{"title": fmt.Sprintf("%s Page %d", siteTitle, current_page_number)}}, topCtx, widgetCtx))
 	}
 }
 
-func renderOnePager(url string, layoutName string, layouts map[string]Mapper, ctx mustache.Context) {
+func renderOnePager(public, url, layoutName string, layouts map[string]Mapper, ctx mustache.Context) {
 	str, err := RenderInLayout("", layoutName, layouts, ctx)
 	if err != nil {
 		Log(ERROR, "Pager %s %s", url, err)
 		return
 	}
 	if strings.HasSuffix(url, "/") {
-		url += "/index.html"
+		url = filepath.Join(url, "/index.html")
 	}
-	WriteTo(url, str)
+	WriteTo(public, url, str)
 }

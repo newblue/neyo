@@ -56,7 +56,7 @@ func main() {
 	case "payload":
 		_payload()
 	case "compile":
-		_compile()
+		_compile(args)
 	case "post":
 		_post(args)
 	case "http":
@@ -119,9 +119,18 @@ func edit_new_post(path string) {
 }
 
 func _http(args []string) {
-	http_addr := http_command.String("http", ":8080", "Http addr for Preview or Server")
-	neyo.Log(neyo.INFO, "Listen at %s", *http_addr)
-	neyo.Log(neyo.INFO, "%s", http.ListenAndServe(*http_addr, http.FileServer(http.Dir("compiled"))))
+	address := "127.0.0.1"
+	public := neyo.DEFAULT_PUBLIC_DIRETORY
+
+	if la := len(args); la < 2 {
+		fmt.Printf("%s http <address:port> [public diretory]\n", NAME)
+	} else if la == 2 {
+		address = args[1]
+	} else if la == 3 {
+		address, public = args[1], args[2]
+	}
+	neyo.Log(neyo.INFO, "Listen at %s", address)
+	http.ListenAndServe(address, http.FileServer(http.Dir(public)))
 }
 
 func _update_zip(args []string) {
@@ -176,7 +185,7 @@ func _update_zip(args []string) {
 			return nil
 		})
 	} else {
-		fmt.Printf("\t %s zip.go [-ignore-hide] <diretory>      Archive project directory, and make zip.go\n", NAME)
+		fmt.Printf("\t %s zip.go  <diretory>      Archive project directory, and make zip.go\n", NAME)
 	}
 }
 func EncodeIntoGo(filename, gofilename string, varname string) error {
@@ -201,7 +210,7 @@ func _pprof() {
 	pprof.StartCPUProfile(f)
 	defer pprof.StopCPUProfile()
 	for i := 0; i < 100; i++ {
-		err := neyo.Compile()
+		err := neyo.Compile(neyo.DEFAULT_PUBLIC_DIRETORY)
 		if err != nil {
 			neyo.Log(neyo.ERROR, "%s", err)
 		}
@@ -241,8 +250,12 @@ func _payload() {
 	neyo.Log(neyo.INFO, string(buf))
 }
 
-func _compile() {
-	err := neyo.Compile()
+func _compile(args []string) {
+	public := neyo.DEFAULT_PUBLIC_DIRETORY
+	if len(args) == 2 {
+		public = args[1]
+	}
+	err := neyo.Compile(public)
 	if err != nil {
 		neyo.Log(neyo.ERROR, "%s", err)
 	}

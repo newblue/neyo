@@ -80,7 +80,7 @@ Compile to generate static web page
 
 > yo compile
 
-Finished instantly. A new folder named compiled will be generated, all website is in it.
+Finished instantly. A new folder named public will be generated, all website is in it.
 
 Local preview
 -------

@@ -24,7 +24,7 @@ func ReadYmlCnf(root string) (map[string]interface{}, error) {
 
 // 从文件读取YAML
 func ReadYml(path string) (cnf map[string]interface{}, err error) {
-	Log(INFO, "Read yaml config file %s", path)
+	Log(DEBUG, "Read %s", path)
 	err = nil
 	f, err := os.Open(path)
 	if err != nil {
@@ -45,10 +45,10 @@ func ReadYmlReader(r io.Reader) (cnf map[string]interface{}, err error) {
 	}
 
 	if string(buf[0:1]) == "{" {
-		Log(INFO, "\tLook lile a json, try it")
+		Log(DEBUG, "\tLook lile a json, try it")
 		err = json.Unmarshal(buf, &cnf)
 		if err == nil {
-			Log(WARN, "\tIt is json map")
+			Log(DEBUG, "\tIt is json map")
 			return
 		}
 	}

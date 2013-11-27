@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/wendal/mustache"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -20,7 +21,7 @@ func init() {
 
 // 插件本身应该是线程安全的
 type Plugin interface {
-	Exec(mustache.Context)
+	Exec(string, mustache.Context)
 }
 
 //--------------------------------------------------------
@@ -46,7 +47,7 @@ type RssItem struct {
 	Description string `xml:"description"`
 }
 
-func (*RssPlugin) Exec(topCtx mustache.Context) {
+func (*RssPlugin) Exec(public string, topCtx mustache.Context) {
 	title := FromCtx(topCtx, "site.title").(string)
 	production_url := FromCtx(topCtx, "site.config.production_url").(string)
 	pubDate := time.Now().Format(time.RFC822)
@@ -59,7 +60,7 @@ func (*RssPlugin) Exec(topCtx mustache.Context) {
 		items = append(items, item)
 	}
 	rss := &Rss{"2.0", &RssChannel{title, production_url, pubDate, items}}
-	f, err := os.OpenFile("compiled/rss.xml", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+	f, err := os.OpenFile(filepath.Join(public, "/rss.xml"), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, DEFAULT_FILE_MODE)
 	if err != nil {
 		Log(ERROR, "When Create RSS %s", err)
 		return
@@ -84,8 +85,8 @@ func (*RssPlugin) Exec(topCtx mustache.Context) {
 
 type SitemapPlugin struct{}
 
-func (SitemapPlugin) Exec(topCtx mustache.Context) {
-	f, err := os.OpenFile("compiled/sitemap.xml", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+func (SitemapPlugin) Exec(public string, topCtx mustache.Context) {
+	f, err := os.OpenFile(filepath.Join(public, "/sitemap.xml"), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, DEFAULT_FILE_MODE)
 	if err != nil {
 		Log(ERROR, "When create sitemap %s", err)
 		return

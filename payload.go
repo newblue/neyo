@@ -591,8 +591,9 @@ func SortPosts(dict map[string]Mapper, post_ids []string) []string {
 func LoadLayouts(root string, theme string) map[string]Mapper {
 	layouts := make(map[string]Mapper)
 	var layout Mapper
-	Log(INFO, "Load layouts: %sthemes/%s/layouts/", root, theme)
-	filepath.Walk(root+"themes/"+theme+"/layouts/", func(path string, info os.FileInfo, err error) error {
+	Log(DEBUG, "Load %sthemes/%s/layouts/", root, theme)
+	layout_path := filepath.Join(root, "themes", theme, "/layouts/")
+	filepath.Walk(layout_path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -637,7 +638,7 @@ func LoadLayouts(root string, theme string) map[string]Mapper {
 		}
 		layoutName := filename[0 : len(filename)-len(filepath.Ext(filename))]
 		layouts[layoutName] = layout
-		Log(INFO, "\tLoad Layout: %s ", layoutName)
+		Log(DEBUG, "Load layout: %s", layoutName)
 		return nil
 	})
 	return layouts

@@ -142,7 +142,7 @@ func LoadWidgets(topCtx mustache.Context) ([]Widget, string, error) {
 			return err
 		}
 		widgets = append(widgets, widget)
-		Log(INFO, "Load widget from %s", cnf_path)
+		Log(DEBUG, "Load widget %s", cnf_path)
 		return nil
 	})
 	return widgets, assets, err
@@ -197,7 +197,7 @@ func (self CommentsWidget) Prepare(mapper Mapper, topCtx mustache.Context) Mappe
 }
 
 func BuildCommentsWidget(cnf Mapper, topCtx mustache.Context) (Widget, error) {
-	Log(INFO, "Comments >> %s", cnf.Layout())
+	Log(INFO, "Build comment widget %s", cnf.Layout())
 	switch cnf.Layout() {
 	case "disqus":
 		disqus := cnf[cnf.Layout()].(map[string]interface{})

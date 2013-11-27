@@ -38,7 +38,7 @@ func CreateNewPost(title string) (path string) {
 	if err == nil || !os.IsNotExist(err) {
 		Log(ERROR, "Post file(%s) exist?", path)
 	}
-	err = ioutil.WriteFile(path, []byte(fmt.Sprintf(TPL_NEW_POST, title, time.Now().Format("2006-01-02"))), 0600)
+	err = ioutil.WriteFile(path, []byte(fmt.Sprintf(TPL_NEW_POST, title, time.Now().Format("2006-01-02"))), DEFAULT_FILE_MODE)
 	if err != nil {
 		Log(ERROR, "%s", err)
 	}
@@ -65,7 +65,7 @@ func CreateNewPostWithImgs(title, imgsrc string) (path string) {
 	imgs := cpPostImgs(post, imgsrc, cfg)
 	tags := generateImgLinks(imgs, cfg)
 
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0600)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, DEFAULT_FILE_MODE)
 	if err != nil {
 		panic(err)
 	}
@@ -93,7 +93,7 @@ func cpPostImgs(post string, imgsrc string, cfg Mapper) (imgtag []string) {
 	imgdst := filepath.Join(cfg.GetString("localdir"), post)
 	_, err = os.Stat(imgdst)
 	if os.IsNotExist(err) {
-		os.MkdirAll(imgdst, 0700)
+		os.MkdirAll(imgdst, DEFAULT_DIR_MODE)
 	}
 
 	imgtag = make([]string, len(files))
