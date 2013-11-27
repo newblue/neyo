@@ -642,6 +642,7 @@ func renderPaginator(public string, pgCnf Mapper, layouts map[string]Mapper, top
 	one_page := make([]Mapper, 0)
 	current_page_number := 0
 	Log(INFO, "Total posts: %5d", len(chronological))
+
 	for i, post_id := range chronological {
 		if i != 0 && i%per_page == 0 {
 			current_page_number++
@@ -653,9 +654,16 @@ func renderPaginator(public string, pgCnf Mapper, layouts map[string]Mapper, top
 			}
 			paginator_navigation[current_page_number-1]["is_active_page"] = true
 			widgetCtx := PrapareWidgets(widgets, make(Mapper), topCtx)
-			renderOnePager(public, paginator_navigation[current_page_number-1].String("url"), layout, layouts,
-				mustache.MakeContexts(map[string]interface{}{"posts": posts_ctx,
-					"page": map[string]interface{}{"title": fmt.Sprintf("%s Page %d", siteTitle, current_page_number)}}, topCtx, widgetCtx))
+
+			_vars := map[string]interface{}{
+				"posts": posts_ctx,
+				"page": map[string]interface{}{
+					"title": fmt.Sprintf("%s Page %d", siteTitle, current_page_number),
+				},
+			}
+			_url := paginator_navigation[current_page_number-1].String("url")
+			_ctx := mustache.MakeContexts(_vars, topCtx, widgetCtx)
+			renderOnePager(public, _url, layout, layouts, _ctx)
 			one_page = one_page[0:0]
 		}
 		post := dictionary[post_id]
@@ -664,7 +672,7 @@ func renderPaginator(public string, pgCnf Mapper, layouts map[string]Mapper, top
 	}
 	if len(one_page) > 0 {
 		current_page_number++
-		Log(DEBUG, "Rendering page #%d with %d post(s)", current_page_number, len(one_page))
+		Log(INFO, "Rendering page #%d with %d post(s)", current_page_number, len(one_page))
 		posts_ctx["current_page_number"] = current_page_number
 		posts_ctx["paginator"] = one_page
 		if current_page_number >= 2 {
@@ -673,9 +681,15 @@ func renderPaginator(public string, pgCnf Mapper, layouts map[string]Mapper, top
 		paginator_navigation[current_page_number-1]["is_active_page"] = true
 		m := make(Mapper)
 		widgetCtx := PrapareWidgets(widgets, m, topCtx)
-		renderOnePager(public, paginator_navigation[current_page_number-1].String("url"), layout, layouts,
-			mustache.MakeContexts(map[string]interface{}{"posts": posts_ctx,
-				"page": map[string]interface{}{"title": fmt.Sprintf("%s Page %d", siteTitle, current_page_number)}}, topCtx, widgetCtx))
+		vars := map[string]interface{}{
+			"posts": posts_ctx,
+			"page": map[string]interface{}{
+				"title": fmt.Sprintf("%s Page %d", siteTitle, current_page_number),
+			},
+		}
+		_url := paginator_navigation[current_page_number-1].String("url")
+		_ctx := mustache.MakeContexts(vars, topCtx, widgetCtx)
+		renderOnePager(public, _url, layout, layouts, _ctx)
 	}
 }
 
