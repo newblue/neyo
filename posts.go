@@ -1,4 +1,4 @@
-package gor
+package neyo
 
 // 列出全部post -- 纯属无聊?
 func ListPosts() {

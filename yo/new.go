@@ -4,7 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"encoding/base64"
-	"github.com/newblue/gor"
+	"github.com/newblue/neyo"
 	"io"
 	"io/ioutil"
 	"os"
@@ -14,12 +14,12 @@ import (
 func new_init(path string) {
 	_, err := os.Stat(path)
 	if err == nil || !os.IsNotExist(err) {
-		gor.Log(gor.ERROR, "Path Exist?!")
+		neyo.Log(neyo.ERROR, "Path Exist?!")
 	}
 
 	err = os.MkdirAll(path, 0700)
 	if err != nil {
-		gor.Log(gor.ERROR, "Make diretory error %s", err)
+		neyo.Log(neyo.ERROR, "Make diretory error %s", err)
 	}
 
 	decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(INIT_ZIP))
@@ -27,10 +27,10 @@ func new_init(path string) {
 
 	z, err := zip.NewReader(bytes.NewReader(b), int64(len(b)))
 	if err != nil {
-		gor.Log(gor.ERROR, "Read zip data error %s", err)
+		neyo.Log(neyo.ERROR, "Read zip data error %s", err)
 	}
 
-	gor.Log(gor.INFO, "Unpack init content zip")
+	neyo.Log(neyo.INFO, "Unpack init content zip")
 
 	for _, zf := range z.File {
 		if zf.FileInfo().IsDir() {
@@ -40,7 +40,7 @@ func new_init(path string) {
 		os.MkdirAll(filepath.Dir(dst), os.ModePerm)
 		f, err := os.OpenFile(dst, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
 		if err != nil {
-			gor.Log(gor.ERROR, "Open %s error %s", dst, err)
+			neyo.Log(neyo.ERROR, "Open %s error %s", dst, err)
 		}
 
 		defer f.Sync()
@@ -48,15 +48,15 @@ func new_init(path string) {
 
 		rc, err := zf.Open()
 		if err != nil {
-			gor.Log(gor.ERROR, "Open %s error %s", zf.FileInfo().Name(), err)
+			neyo.Log(neyo.ERROR, "Open %s error %s", zf.FileInfo().Name(), err)
 		}
 
 		defer rc.Close()
 
 		_, err = io.Copy(f, rc)
 		if err != nil {
-			gor.Log(gor.ERROR, "Copy %s to %s error %s.", zf.FileInfo().Name(), dst, err)
+			neyo.Log(neyo.ERROR, "Copy %s to %s error %s.", zf.FileInfo().Name(), dst, err)
 		}
 	}
-	gor.Log(gor.ERROR, "All done.")
+	neyo.Log(neyo.ERROR, "All done.")
 }

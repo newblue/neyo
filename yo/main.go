@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/newblue/gor"
+	"github.com/newblue/neyo"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	NAME = "gor"
+	NAME = "yo"
 	VER  = "20131126"
 )
 
@@ -36,7 +36,7 @@ var (
 
 func init() {
 	flag.Parse()
-	fmt.Printf("%s BETA(%s)\n", NAME, VER)
+	fmt.Printf("%s BETA(%s). a tool fork from gor\n\n", NAME, VER)
 }
 
 func main() {
@@ -69,26 +69,26 @@ func main() {
 }
 
 func _posts() {
-	gor.ListPosts()
+	neyo.ListPosts()
 }
 
 func _post(args []string) {
 	if len(args) == 1 {
-		gor.Log(gor.INFO, "gor post <title> {image diretory}")
+		neyo.Log(neyo.INFO, "%s post <title> {image diretory}", NAME)
 	} else if len(args) == 2 {
-		path := gor.CreateNewPost(args[1])
+		path := neyo.CreateNewPost(args[1])
 		edit_new_post(path)
 	} else {
-		path := gor.CreateNewPostWithImgs(args[1], args[2])
+		path := neyo.CreateNewPostWithImgs(args[1], args[2])
 		edit_new_post(path)
 	}
 }
 
 func get_editor() (editor string) {
 	editor = os.Getenv("EDITOR")
-	cnf, err := gor.ReadConfig(".")
+	cnf, err := neyo.ReadConfig(".")
 	if err != nil {
-		gor.Log(gor.ERROR, "Read config error %s", err)
+		neyo.Log(neyo.ERROR, "Read config error %s", err)
 	} else if ed, ok := cnf["editor"].(string); ok {
 		editor = ed
 	}
@@ -108,10 +108,10 @@ func edit_new_post(path string) {
 				cmd.Stderr = os.Stderr
 				if err := cmd.Start(); err == nil {
 					if err := cmd.Wait(); err != nil {
-						gor.Log(gor.ERROR, "Wait %s", err)
+						neyo.Log(neyo.ERROR, "Wait %s", err)
 					}
 				} else {
-					gor.Log(gor.ERROR, "Start %s", err)
+					neyo.Log(neyo.ERROR, "Start %s", err)
 				}
 			}
 		}
@@ -120,8 +120,8 @@ func edit_new_post(path string) {
 
 func _http(args []string) {
 	http_addr := http_command.String("http", ":8080", "Http addr for Preview or Server")
-	gor.Log(gor.INFO, "Listen at %s", *http_addr)
-	gor.Log(gor.INFO, "%s", http.ListenAndServe(*http_addr, http.FileServer(http.Dir("compiled"))))
+	neyo.Log(neyo.INFO, "Listen at %s", *http_addr)
+	neyo.Log(neyo.INFO, "%s", http.ListenAndServe(*http_addr, http.FileServer(http.Dir("compiled"))))
 }
 
 func _update_zip(args []string) {
@@ -130,9 +130,9 @@ func _update_zip(args []string) {
 
 		tmp_file, err := ioutil.TempFile("", "temp-")
 		if err != nil {
-			gor.Log(gor.ERROR, "Open temp file error %s", err)
+			neyo.Log(neyo.ERROR, "Open temp file error %s", err)
 		} else {
-			gor.Log(gor.DEBUG, "Create temp file %s", tmp_file.Name())
+			neyo.Log(neyo.DEBUG, "Create temp file %s", tmp_file.Name())
 		}
 		defer os.Remove(tmp_file.Name())
 		defer EncodeIntoGo(tmp_file.Name(), "zip.go", "INIT_ZIP")
@@ -141,9 +141,9 @@ func _update_zip(args []string) {
 		z := zip.NewWriter(tmp_file)
 		defer func() {
 			if err := z.Close(); err != nil {
-				gor.Log(gor.ERROR, "Close zip file %s", err)
+				neyo.Log(neyo.ERROR, "Close zip file %s", err)
 			} else {
-				gor.Log(gor.INFO, "zip.go updated.\n")
+				neyo.Log(neyo.INFO, "zip.go updated.\n")
 			}
 		}()
 
@@ -154,7 +154,7 @@ func _update_zip(args []string) {
 			if info.IsDir() {
 				return nil
 			} else if is_ignore {
-				gor.Log(gor.WARN, "Ignore archive %s", path)
+				neyo.Log(neyo.WARN, "Ignore archive %s", path)
 				if info.IsDir() {
 					return filepath.SkipDir
 				}
@@ -162,21 +162,21 @@ func _update_zip(args []string) {
 			}
 
 			zip_path := strings.TrimLeft(path[len(dir):len(path)], "/")
-			gor.Log(gor.DEBUG, "%s\n\t->zip://%s\n", path, zip_path)
+			neyo.Log(neyo.DEBUG, "%s\n\t->zip://%s\n", path, zip_path)
 			if sf, err := os.Open(path); err != nil {
-				gor.Log(gor.ERROR, "Open %s error %s", path, err)
+				neyo.Log(neyo.ERROR, "Open %s error %s", path, err)
 			} else if df, err := z.Create(zip_path); err != nil {
-				gor.Log(gor.ERROR, "Open zip://%s error %s", zip_path, err)
+				neyo.Log(neyo.ERROR, "Open zip://%s error %s", zip_path, err)
 			} else {
 				io.Copy(df, sf)
 				if err := sf.Close(); err != nil {
-					gor.Log(gor.ERROR, "Close %s error %s", path, err)
+					neyo.Log(neyo.ERROR, "Close %s error %s", path, err)
 				}
 			}
 			return nil
 		})
 	} else {
-		fmt.Printf("\t %s zip.go [-ignore-hide] <diretory>      Archive project directory, and make zip.go\n", os.Args[0])
+		fmt.Printf("\t %s zip.go [-ignore-hide] <diretory>      Archive project directory, and make zip.go\n", NAME)
 	}
 }
 func EncodeIntoGo(filename, gofilename string, varname string) error {
@@ -196,54 +196,54 @@ func EncodeIntoGo(filename, gofilename string, varname string) error {
 }
 
 func _pprof() {
-	f, _ := os.OpenFile("gor.pprof", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+	f, _ := os.OpenFile("neyo.pprof", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
 	defer f.Close()
 	pprof.StartCPUProfile(f)
 	defer pprof.StopCPUProfile()
 	for i := 0; i < 100; i++ {
-		err := gor.Compile()
+		err := neyo.Compile()
 		if err != nil {
-			gor.Log(gor.ERROR, "%s", err)
+			neyo.Log(neyo.ERROR, "%s", err)
 		}
 	}
 }
 
 func _config() {
-	cnf, err := gor.ReadConfig(".")
+	cnf, err := neyo.ReadConfig(".")
 	if err != nil {
-		gor.Log(gor.ERROR, "Read config error %s", err)
+		neyo.Log(neyo.ERROR, "Read config error %s", err)
 	}
-	gor.Log(gor.INFO, "RuhohSpec: %s", cnf["RuhohSpec"])
+	neyo.Log(neyo.INFO, "RuhohSpec: %s", cnf["RuhohSpec"])
 	buf, err := json.MarshalIndent(cnf, "", "  ")
 	if err != nil {
-		gor.Log(gor.ERROR, "Marshal error %s", err)
+		neyo.Log(neyo.ERROR, "Marshal error %s", err)
 	}
 	fmt.Printf("Global config\n %s", string(buf))
 }
 
 func _new(args []string) {
 	if len(args) == 1 {
-		fmt.Printf("\t%s new <diertory>\n", os.Args[0])
+		fmt.Printf("\t%s new <diertory>\n", NAME)
 	} else {
 		new_init(args[1])
 	}
 }
 
 func _payload() {
-	payload, err := gor.BuildPlayload("./")
+	payload, err := neyo.BuildPlayload("./")
 	if err != nil {
-		gor.Log(gor.ERROR, "Build paly load %s", err)
+		neyo.Log(neyo.ERROR, "Build paly load %s", err)
 	}
 	buf, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
-		gor.Log(gor.ERROR, "%s", err)
+		neyo.Log(neyo.ERROR, "%s", err)
 	}
-	gor.Log(gor.INFO, string(buf))
+	neyo.Log(neyo.INFO, string(buf))
 }
 
 func _compile() {
-	err := gor.Compile()
+	err := neyo.Compile()
 	if err != nil {
-		gor.Log(gor.ERROR, "%s", err)
+		neyo.Log(neyo.ERROR, "%s", err)
 	}
 }

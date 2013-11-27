@@ -3,21 +3,19 @@
     * [Installation](#installation)
     * [Quick Start](#quick-start)
 * [Copyright and License](#copyright-and-license)
-* [Sites using gor](#sites-using-gor)
 
 [Chinese README.md](README.CN.md)
 
 # English Introduction
 
-This is fork from http://github.com/wendal/gor.git
+This project is fork from http://github.com/wendal/gor.git
 
-## gor -- A static websites and blog generator engine written in Go
-===
+## yo -- A static websites and blog generator engine written in Go fork from gor
 
 Transform your plain text into static websites and blogs.
-`gor` is a [Ruhoh](http://ruhoh.com/) like websites and blog generator engine written in [Go](http://golang.org/). It's almost compatible to ruhoh 1.x specification. You can treat gor as a replacement of the official implementation what is written in [Ruby](http://www.ruby-lang.org/en/).
+`yo(fork gor)` is a [Ruhoh](http://ruhoh.com/) like websites and blog generator engine written in [Go](http://golang.org/). It's almost compatible to ruhoh 1.x specification. You can treat yo as a replacement of the official implementation what is written in [Ruby](http://www.ruby-lang.org/en/).
 
-Why reinvent a wheel? gor has following awesome benefits:
+Why reinvent a wheel? `yo` has following awesome benefits:
 
 1. Speed -- Less than 1 second when compiling all my near 200 blogs on wendal.net
 2. Simple -- Only one single executable file generated after compiling, no other dependence
@@ -26,12 +24,12 @@ Why reinvent a wheel? gor has following awesome benefits:
 ====================
 To install:
 
-> go get github.com/newblue/gor/gor
+> go get github.com/newblue/goyo/yo
 
 If you use [brew](https://github.com/mxcl/homebrew) on Mac, and you didn't set `$GOROOT` and `$GOPATH` environment variable
 Please using this command:
 
-> ln -s /usr/local/Cellar/go/1.0.3/bin/gor /usr/local/bin
+> ln -s /usr/local/Cellar/go/1.0.3/bin/yo /usr/local/bin
 
 ## Quick Start
 ======================
@@ -39,7 +37,7 @@ Please using this command:
 Create a new website
 --------------------
 
-> gor new example.com
+> yo new example.com
 > cd example.com
 
 After execution, a folder named example.com will be generated, including a scaffold & some sample posts.
@@ -47,7 +45,7 @@ After execution, a folder named example.com will be generated, including a scaff
 Create a new post
 ----------
 
-> gor post "goodday" [dir/to/img/files]
+> yo post "goodday" [dir/to/img/files]
 
 Generate a new post file: post/goodday.md, open it with your markdown editor to write.
 
@@ -80,7 +78,7 @@ Open `widgets` folder, you can see some widgets here, there is a `config.yml` fi
 Compile to generate static web page
 --------------
 
-> gor compile
+> yo compile
 
 Finished instantly. A new folder named compiled will be generated, all website is in it.
 
@@ -88,7 +86,7 @@ Local preview
 -------
 gor also comes with a built-in development server that will allow you to preview what the generated site will look like in your browser locally.
 
-> gor http
+> yo http
 
 Open your favorite web browser and visit: http://127.0.0.1:8080
 
@@ -102,19 +100,6 @@ Copyright and License
 
 This project is licensed under the BSD license.
 
-Copyright (C) 2013, by WendalChen wendal1985@gmail.com
-
-Sites using gor
------------------------
-
-[When Go meets Raspberry Pi](http://hugozhu.myalert.info/)
-
-[RaymondChou's Blog](http://ledbk.com/)
-
-[visualfc's blog](http://visualfc.github.com/)
-
-[wendal随笔](http://wendal.net)
-
-[一个热爱木工的软件工程师](http://iwood.co.nr)
+Copyright (C) 2013, by NewBlue newblue@gmail.com
 
 If you are also using gor, please don't hesitate to tell me by email or open an issue.

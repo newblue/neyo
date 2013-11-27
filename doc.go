@@ -1,5 +1,6 @@
+package neyo
+
 // Gor静态模块引擎
-package gor
 
 import (
 	"encoding/json"
