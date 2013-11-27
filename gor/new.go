@@ -38,7 +38,7 @@ func new_init(path string) {
 		}
 		dst := filepath.Join(path, zf.FileInfo().Name())
 		os.MkdirAll(filepath.Dir(dst), os.ModePerm)
-		f, err := os.OpenFile(dst, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+		f, err := os.OpenFile(dst, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
 		if err != nil {
 			gor.Log(gor.ERROR, "Open %s error %s", dst, err)
 		}
