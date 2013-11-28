@@ -315,7 +315,8 @@ func LoadPages(root string, exclude string) (pages map[string]Mapper, err error)
 	if exclude != "" {
 		_exclude, err = regexp.Compile(exclude)
 		if err != nil {
-			err = errors.New("BAD pages exclude regexp : " + exclude + "\t" + err.Error())
+			errMsg := fmt.Sprintf("BAD pages exclude regexp %q >> ", exclude, err.Error())
+			err = errors.New(errMsg)
 			return
 		}
 	}
@@ -345,11 +346,11 @@ func LoadPage(root string, path string) (ctx Mapper, err error) {
 	if err != nil {
 		return
 	}
-	ctx["id"] = path[len(root+"pages/"):]
+	pagePath := filepath.Join(root, "pages/")
+	ctx["id"] = path[len(pagePath):]
 	return
 }
 
-// 载入所有的Post
 func LoadPosts(root string, exclude string) (posts map[string]Mapper, err error) {
 	posts = make(map[string]Mapper)
 	err = nil
@@ -357,7 +358,8 @@ func LoadPosts(root string, exclude string) (posts map[string]Mapper, err error)
 	if exclude != "" {
 		_exclude, err = regexp.Compile(exclude)
 		if err != nil {
-			err = errors.New(fmt.Sprintf("BAD pages exclude regexp %q error %s", exclude, err.Error()))
+			errMsg := fmt.Sprintf("BAD pages exclude regexp %q error %s", exclude, err.Error())
+			err = errors.New(errMsg)
 			return
 		}
 	}
@@ -382,18 +384,19 @@ func LoadPosts(root string, exclude string) (posts map[string]Mapper, err error)
 	return
 }
 
-// 载入特定的Post
 func LoadPost(root string, path string) (ctx Mapper, err error) {
 	ctx, err = ReadMuPage(path)
 	if err != nil {
 		return
 	}
 	if ctx["date"] == nil {
-		err = errors.New("Miss date! >> " + path)
+		errMsg := fmt.Sprintf("%s >> miss date!", path)
+		err = errors.New(errMsg)
 		return
 	}
 	if ctx["title"] == "" {
-		err = errors.New("Miss title! >> " + path)
+		errMsg := fmt.Sprintf("%s >> miss title!", path)
+		err = errors.New(errMsg)
 		return
 	}
 	var date time.Time
@@ -401,7 +404,8 @@ func LoadPost(root string, path string) (ctx Mapper, err error) {
 	if err != nil {
 		date2, err2 := time.Parse("2006-01-02 15:04:05", ctx["date"].(string))
 		if err2 != nil {
-			err = errors.New("BAD date >>" + path + " " + err.Error() + " " + err2.Error())
+			errMsg := fmt.Sprintf("%s >> bad date, %s %s", path, err.Error(), err2.Error())
+			err = errors.New(errMsg)
 			return
 		}
 		date = date2
@@ -437,7 +441,8 @@ func ReadMuPage(path string) (ctx map[string]interface{}, err error) {
 		return
 	}
 	if !strings.HasPrefix(line, "---") {
-		err = errors.New("Not Start with ---   : " + path)
+		errMsg := fmt.Sprintf("%s >> not start with ---", path)
+		err = errors.New(errMsg)
 		return
 	}
 
@@ -459,13 +464,15 @@ func ReadMuPage(path string) (ctx map[string]interface{}, err error) {
 
 	ctx, err = ReadYmlReader(buf)
 	if err != nil {
-		err = errors.New(path + " --> " + err.Error())
+		errMsg := fmt.Sprintf("%s >> %s", path, err.Error())
+		err = errors.New(errMsg)
 		return
 	}
 
 	d, err := ioutil.ReadAll(br)
 	if err != nil {
-		err = errors.New(path + " --> " + err.Error())
+		errMsg := fmt.Sprintf("%s >> %s", path, err.Error())
+		err = errors.New(errMsg)
 		return
 	}
 	ctx["_content"] = &DocContent{string(d), "", nil}
@@ -501,7 +508,7 @@ func AsStrings(v interface{}) (strs []string) {
 	case []string:
 		strs = v.([]string)
 	default:
-		Log(INFO, "%s", v)
+		Log(INFO, "AsString %s", v)
 	}
 	return
 }
@@ -517,7 +524,7 @@ func EncodePathInfo(pathinfo string) string {
 func DecodePathInfo(pathinfo string) string {
 	pathinfo2, err := URL.QueryUnescape(pathinfo)
 	if err != nil {
-		Log(ERROR, "DecodePathInfo fail %s", err)
+		Log(ERROR, "DecodePathInfo %s >> %s", pathinfo, err)
 		return pathinfo
 	}
 	return pathinfo2
@@ -546,9 +553,9 @@ func CreatePostURL(db map[string]interface{}, basePath string, post map[string]i
 	}
 
 	if strings.HasPrefix(url, "/") {
-		post["url"] = basePath + url[1:]
+		post["url"] = filepath.Join(basePath, url[1:])
 	} else {
-		post["url"] = basePath + url
+		post["url"] = filepath.Join(basePath, url)
 	}
 }
 
@@ -620,7 +627,7 @@ func LoadLayouts(root string, theme string) map[string]Mapper {
 			}
 			tpl, err := mustache.Parse(bytes.NewBufferString(layout["_content"].(*DocContent).Source))
 			if err != nil {
-				Log(ERROR, "Bad Layout %s %s", path, err)
+				Log(ERROR, "Bad layout %s %s", path, err)
 				return err
 			}
 			layout["_content"].(*DocContent).TPL = tpl

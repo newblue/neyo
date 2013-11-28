@@ -2,7 +2,6 @@ package neyo
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,7 +10,7 @@ import (
 )
 
 const (
-	TPL_NEW_POST = `---
+	NEW_POST = `---
 title: %s
 date: '%s'
 description:
@@ -27,19 +26,19 @@ tags:
 	IMG_LOCALDIR  = `media/`
 )
 
-// 创建一个新post
-// TODO 移到到其他地方?
 func CreateNewPost(title string) (path string) {
-	if !IsGorDir(".") {
-		Log(ERROR, "Not Gor Dir, need config.yml")
+	if wd, err := os.Getwd(); err != nil || !IsYoProjectDir(wd) {
+		Log(ERROR, "Not yo project diretory, need config.yml")
 	}
+
 	path = filepath.Join("posts/", strings.Replace(title, " ", "-", -1)+".md")
-	_, err := os.Stat(path)
-	if err == nil || !os.IsNotExist(err) {
+
+	if _, err := os.Stat(path); err == nil || !os.IsNotExist(err) {
 		Log(ERROR, "Post file(%s) exist?", path)
 	}
-	err = ioutil.WriteFile(path, []byte(fmt.Sprintf(TPL_NEW_POST, title, time.Now().Format("2006-01-02"))), DEFAULT_FILE_MODE)
-	if err != nil {
+	post_default := fmt.Sprintf(NEW_POST, title, time.Now().Format("2006-01-02"))
+
+	if err := ioutil.WriteFile(path, []byte(post_default), DEFAULT_FILE_MODE); err != nil {
 		Log(ERROR, "%s", err)
 	}
 	Log(INFO, "Create Post at %s", path)
@@ -47,42 +46,41 @@ func CreateNewPost(title string) (path string) {
 }
 
 func CreateNewPostWithImgs(title, imgsrc string) (path string) {
-
 	cfg := loadConfig(".")
 	for k, v := range cfg {
-		Log(INFO, "%s = %s", k, v)
+		Log(DEBUG, "CFG %s = %s", k, v)
 	}
 	path = CreateNewPost(title)
 
 	start := strings.LastIndex(path, "/") + 1
 	end := strings.LastIndex(path, ".")
+
 	if start < 0 || end < 0 {
-		Log(ERROR, "path not complate? %s", path)
+		Log(ERROR, "%s path not complate?", path)
 	}
 	post := path[start:end]
 
-	// 如果创建失败直接exit，所以不用检查
-	imgs := cpPostImgs(post, imgsrc, cfg)
+	imgs := copyPostImgs(post, imgsrc, cfg)
 	tags := generateImgLinks(imgs, cfg)
 
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, DEFAULT_FILE_MODE)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
+	if file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, DEFAULT_FILE_MODE); err != nil {
+		Log(ERROR, "Open %s >> %s", path, err)
+	} else {
+		defer file.Close()
 
-	for _, tag := range tags {
-		if _, err = f.WriteString("\n" + tag + "\n"); err != nil {
-			panic(err)
+		for _, tag := range tags {
+			if _, err = file.WriteString("\n" + tag + "\n"); err != nil {
+				panic(err)
+			}
 		}
 	}
 	return
 }
 
-func cpPostImgs(post string, imgsrc string, cfg Mapper) (imgtag []string) {
+func copyPostImgs(post string, imgsrc string, cfg Mapper) (imgtag []string) {
 	files, err := ioutil.ReadDir(imgsrc)
 	if files == nil || err != nil {
-		Log(INFO, "no img file exists.")
+		Log(INFO, "No img file exists.")
 		return nil
 	}
 
@@ -91,16 +89,17 @@ func cpPostImgs(post string, imgsrc string, cfg Mapper) (imgtag []string) {
 	}
 
 	imgdst := filepath.Join(cfg.GetString("localdir"), post)
-	_, err = os.Stat(imgdst)
-	if os.IsNotExist(err) {
+
+	if _, err := os.Stat(imgdst); os.IsNotExist(err) {
 		os.MkdirAll(imgdst, DEFAULT_DIR_MODE)
 	}
 
 	imgtag = make([]string, len(files))
 	i := 0
 	for idx, f := range files {
-		err := cp(filepath.Join(imgdst, f.Name()), filepath.Join(imgsrc, f.Name()))
-		if err != nil {
+		dst_path := filepath.Join(imgdst, f.Name())
+		src_path := filepath.Join(imgsrc, f.Name())
+		if err := Copy(dst_path, src_path); err != nil {
 			Log(ERROR, "%5d resouce file copy %s error", idx, f.Name())
 			continue
 		}
@@ -112,29 +111,9 @@ func cpPostImgs(post string, imgsrc string, cfg Mapper) (imgtag []string) {
 	return
 }
 
-func cp(dst, src string) error {
-	s, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	// no need to check errors on read only file, we already got everything
-	// we need from the filesystem, so nothing can go wrong now.
-	defer s.Close()
-	d, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(d, s); err != nil {
-		d.Close()
-		return err
-	}
-	return d.Close()
-}
-
 func generateImgLinks(files []string, cfg Mapper) (links []string) {
 	links = make([]string, len(files))
 	for i, f := range files {
-		//tmp := strings.TrimLeft(f, "rc/")
 		links[i] = fmt.Sprintf(cfg.GetString("imgtag"), cfg.GetString("urlperfix")+f)
 		println(i, links[i])
 	}
@@ -146,12 +125,13 @@ func loadConfig(root string) (imgs_cfg Mapper) {
 	var cfg Mapper
 	var err error
 
-	if root == "" {
-		root = "."
+	if wd, err := os.Getwd(); err == nil && root == "" {
+		root = wd
+	} else if abs, err := filepath.Abs("."); err == nil && root == "" {
+		root = abs
 	}
-	root, _ = filepath.Abs(root)
 
-	Log(DEBUG, "root = %s", root)
+	Log(DEBUG, "ROOT %s", root)
 
 	cfg, err = ReadYml(root + CONFIG_YAML)
 	if err != nil {
