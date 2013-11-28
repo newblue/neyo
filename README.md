@@ -24,7 +24,7 @@ Why reinvent a wheel? `yo` has following awesome benefits:
 ====================
 To install:
 
-> go get github.com/newblue/goyo/yo
+> go get github.com/newblue/neyo/yo
 
 If you use [brew](https://github.com/mxcl/homebrew) on Mac, and you didn't set `$GOROOT` and `$GOPATH` environment variable
 Please using this command:
