@@ -44,7 +44,7 @@
 > git add *
 > git commit
 
-> git remote add origin https://github.com/<username>/<repo>.git
+> git remote add origin git@github.com/<username>/<repo>.git
 > git push -u origin master
 
 大概就是这样。
