@@ -504,12 +504,19 @@ func PrapareAssets(theme string, layoutName string, topCtx mustache.Context) str
 }
 
 func CopyResources(public, themeName string) {
-	if fi, err := os.Stat("others"); err == nil && fi.IsDir() {
-		copyDir("others", public)
+	SyncDirectory("others", public)
+	SyncDirectory("media", filepath.Join(public, "/assets/media"))
+	SyncDirectory("widgets", filepath.Join(public, "/assets/widgets"))
+	SyncDirectory(filepath.Join("themes/", themeName), filepath.Join(public, "/assets/", themeName))
+}
+
+func SyncDirectory(src string, target string) error {
+	if fi, err := os.Stat(src); os.IsExist(err) && fi.IsDir() {
+		copyDir(src, target)
+	} else {
+		return err
 	}
-	copyDir("media", filepath.Join(public, "/assets/media"))
-	copyDir(filepath.Join("themes/", themeName), filepath.Join(public, "/assets/", themeName))
-	copyDir("widgets", filepath.Join(public, "/assets/widgets"))
+	return nil
 }
 
 func copyDir(src string, target string) error {

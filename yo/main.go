@@ -1,18 +1,18 @@
 package main
 
 import (
-	"archive/zip"
-	"encoding/base64"
+	//	"archive/zip"
+	//	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/newblue/neyo"
-	"io"
-	"io/ioutil"
+	//	"io"
+	//	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
+	//	"path/filepath"
 	"runtime/pprof"
 	"strings"
 )
@@ -62,8 +62,8 @@ func main() {
 		_http(args)
 	case "pprof":
 		_pprof()
-	case "zip.go":
-		_update_zip(args)
+		//case "zip.go":
+		//	_update_zip(args)
 	}
 }
 
@@ -132,6 +132,7 @@ func _http(args []string) {
 	http.ListenAndServe(address, http.FileServer(http.Dir(public)))
 }
 
+/*
 func _update_zip(args []string) {
 	if len(args) == 2 {
 		dir := args[1]
@@ -186,7 +187,9 @@ func _update_zip(args []string) {
 	} else {
 		Usage()
 	}
-}
+}*/
+
+/*
 func EncodeIntoGo(filename, gofilename string, varname string) error {
 	d, _ := ioutil.ReadFile(filename)
 	_zip, _ := os.OpenFile(gofilename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0600)
@@ -202,6 +205,7 @@ func EncodeIntoGo(filename, gofilename string, varname string) error {
 	_zip.Sync()
 	return _zip.Close()
 }
+*/
 
 func _pprof() {
 	f, _ := os.OpenFile("neyo.pprof", os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
@@ -232,7 +236,7 @@ func _new(args []string) {
 	if len(args) == 1 {
 		Usage()
 	} else {
-		new_init(args[1])
+		neyo.New(args[1], INIT_DATA)
 	}
 }
 
